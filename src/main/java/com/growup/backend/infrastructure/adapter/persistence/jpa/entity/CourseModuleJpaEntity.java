@@ -37,6 +37,9 @@ public class CourseModuleJpaEntity {
     @Column(nullable = false, length = 1000)
     private String description;
 
+    @Column(name = "module_order")
+    private Integer order;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
     private CourseJpaEntity course;

@@ -19,6 +19,7 @@ public class CourseModule {
     private UUID id;
     private String title;
     private String description;
+    private Integer order;
     private List<Topic> topics;
     private Long version;
 }

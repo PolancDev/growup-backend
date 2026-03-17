@@ -40,13 +40,25 @@ public class CursosWebAdapter implements CursosApiDelegate {
                 category, level, status);
 
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        var instructor = userInPort.getUserByEmail(currentEmail);
+        var user = userInPort.getUserByEmail(currentEmail);
+
+        UUID instructorIdFilter = null;
+        CourseStatus targetStatus = status;
+
+        if (com.growup.backend.domain.model.Role.TEACHER.equals(user.getRole())) {
+            instructorIdFilter = user.getId();
+        } else if (com.growup.backend.domain.model.Role.STUDENT.equals(user.getRole())) {
+            // Los estudiantes solo pueden ver cursos publicados
+            targetStatus = CourseStatus.PUBLICADO;
+        }
+
+        log.info("GrowUp-Log: CursosWebAdapter - Instructor ID: {}, Estado Final: {}", instructorIdFilter, targetStatus);
 
         var domainCourses = courseInPort.getAllCourses(
-                instructor.getId(),
+                instructorIdFilter,
                 category,
                 level != null ? level.getValue() : null,
-                status != null ? status.getValue() : null);
+                targetStatus != null ? targetStatus.getValue() : null);
 
         return ResponseEntity.ok(domainCourses.stream()
                 .map(courseMapper::toDto)
@@ -55,6 +67,7 @@ public class CursosWebAdapter implements CursosApiDelegate {
 
     @Override
     public ResponseEntity<Course> coursesIdGet(UUID id) {
+        log.info("GrowUp-Log: CursosWebAdapter - Obteniendo detalles del curso con ID: {}", id);
         var domainCourse = courseInPort.getCourseById(id);
         return ResponseEntity.ok(courseMapper.toDto(domainCourse));
     }
@@ -93,6 +106,7 @@ public class CursosWebAdapter implements CursosApiDelegate {
 
     @Override
     public ResponseEntity<List<Syllabus>> coursesIdSyllabusGet(UUID id) {
+        log.info("GrowUp-Log: CursosWebAdapter - Obteniendo syllabus del curso con ID: {}", id);
         // En este modelo, el syllabus es parte del curso.
         var domainCourse = courseInPort.getCourseById(id);
         var courseDto = courseMapper.toDto(domainCourse);

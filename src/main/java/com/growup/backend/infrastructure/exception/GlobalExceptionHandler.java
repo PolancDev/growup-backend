@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import java.time.OffsetDateTime;
 import java.util.stream.Collectors;
 
@@ -26,6 +28,18 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ErrorResponse> handleForbidden(AccessDeniedException ex) {
         log.error("GrowUp-Log: GlobalExceptionHandler - Acceso denegado: {}", ex.getMessage());
         return buildResponse(HttpStatus.FORBIDDEN, "No tienes permisos para realizar esta acción");
+    }
+    
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
+        log.warn("GrowUp-Log: GlobalExceptionHandler - Credenciales inválidas: {}", ex.getMessage());
+        return buildResponse(HttpStatus.UNAUTHORIZED, "Email o contraseña incorrectos");
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
+        log.warn("GrowUp-Log: GlobalExceptionHandler - Error de autenticación: {}", ex.getMessage());
+        return buildResponse(HttpStatus.UNAUTHORIZED, "Error de autenticación: " + ex.getMessage());
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

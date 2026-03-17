@@ -16,5 +16,7 @@ public interface EnrollmentInPort {
     Enrollment updateProgress(UUID enrollmentId, Integer progress, UUID nextLessonId);
 
     StudentStats getStudentStats(UUID studentId);
+
+    boolean isStudentEnrolled(UUID studentId, UUID courseId);
 }
 // StudentStats podría ser un objeto de dominio o un DTO de aplicación

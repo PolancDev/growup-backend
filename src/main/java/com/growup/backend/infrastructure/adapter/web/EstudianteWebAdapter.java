@@ -71,6 +71,13 @@ public class EstudianteWebAdapter implements EstudianteApiDelegate {
     }
 
     @Override
+    public ResponseEntity<Boolean> coursesIdEnrolledGet(UUID id) {
+        var studentId = getCurrentStudentId();
+        var isEnrolled = enrollmentInPort.isStudentEnrolled(studentId, id);
+        return ResponseEntity.ok(isEnrolled);
+    }
+
+    @Override
     public ResponseEntity<List<EnrolledCourse>> studentEnrollmentsGet() {
         var studentId = getCurrentStudentId();
         var enrollments = enrollmentInPort.getStudentEnrollments(studentId);

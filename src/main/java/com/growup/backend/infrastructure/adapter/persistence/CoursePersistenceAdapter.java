@@ -1,14 +1,16 @@
 package com.growup.backend.infrastructure.adapter.persistence;
 
-import com.growup.backend.domain.port.out.CoursePersistencePort;
 import com.growup.backend.domain.model.Course;
-import com.growup.backend.model.CourseLevel;
-import com.growup.backend.model.CourseStatus;
+import com.growup.backend.domain.port.out.CoursePersistencePort;
+import com.growup.backend.infrastructure.adapter.persistence.jpa.entity.CourseJpaEntity;
 import com.growup.backend.infrastructure.adapter.persistence.jpa.repository.CourseJpaRepository;
 import com.growup.backend.infrastructure.exception.ResourceNotFoundException;
 import com.growup.backend.infrastructure.mapper.CoursePersistenceMapper;
+import com.growup.backend.model.CourseLevel;
+import com.growup.backend.model.CourseStatus;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -38,7 +40,7 @@ public class CoursePersistenceAdapter implements CoursePersistencePort {
 
     @Override
     public Optional<Course> findById(UUID id) {
-        return courseRepository.findById(id).map(courseMapper::toDomain);
+        return courseRepository.findByIdWithSyllabusOrdered(id).map(courseMapper::toDomain);
     }
 
     @Override
@@ -66,24 +68,39 @@ public class CoursePersistenceAdapter implements CoursePersistencePort {
     public void deleteById(UUID id) {
         if (id != null) {
             // Gracias a las anotaciones @SQLDelete en CourseJpaEntity, esto realiza un
-            // borrado lógico.
+            // borrado logico.
             courseRepository.deleteById(id);
         }
     }
 
     @Override
     public List<Course> findByFilters(UUID instructorId, String category, String level, String status) {
-        CourseLevel levelEnum = null;
-        if (level != null && !level.isEmpty()) {
-            levelEnum = CourseLevel.fromValue(level);
+        final CourseLevel levelEnum = (level != null && !level.isBlank()) ? CourseLevel.fromValue(level) : null;
+        final CourseStatus statusEnum = (status != null && !status.isBlank()) ? CourseStatus.fromValue(status) : null;
+
+        Specification<CourseJpaEntity> specification = Specification.where(null);
+
+        if (instructorId != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("instructor").get("id"), instructorId));
         }
 
-        CourseStatus statusEnum = null;
-        if (status != null && !status.isEmpty()) {
-            statusEnum = CourseStatus.fromValue(status);
+        if (category != null && !category.isBlank()) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("category"), category));
         }
 
-        return courseRepository.findWithFilters(instructorId, category, levelEnum, statusEnum).stream()
+        if (levelEnum != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("level"), levelEnum));
+        }
+
+        if (statusEnum != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("publicationStatus"), statusEnum));
+        }
+
+        return courseRepository.findAll(specification).stream()
                 .map(courseMapper::toDomain)
                 .collect(Collectors.toList());
     }
