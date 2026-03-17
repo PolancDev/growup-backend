@@ -47,7 +47,7 @@ public class EnrollmentJpaEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "enrollment_status", nullable = false)
     @Builder.Default
-    private EnrollmentStatus enrollmentStatus = EnrollmentStatus.ACTIVE;
+    private EnrollmentStatus enrollmentStatus = EnrollmentStatus.NOT_STARTED;
 
     @Column(name = "next_lesson_id")
     private UUID nextLessonId;
@@ -71,7 +71,7 @@ public class EnrollmentJpaEntity {
         if (progress == null)
             progress = 0;
         if (enrollmentStatus == null)
-            enrollmentStatus = EnrollmentStatus.ACTIVE;
+            enrollmentStatus = EnrollmentStatus.NOT_STARTED;
     }
 
     @PreUpdate
