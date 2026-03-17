@@ -47,7 +47,7 @@ public class EnrollmentService implements EnrollmentInPort {
                                 .student(student)
                                 .course(course)
                                 .progress(0)
-                                .enrollmentStatus("ACTIVE")
+                                .enrollmentStatus("NOT_STARTED")
                                 .lastAccessDate(OffsetDateTime.now())
                                 .build();
 
@@ -101,5 +101,10 @@ public class EnrollmentService implements EnrollmentInPort {
                                                 .filter(e -> "COMPLETED".equals(e.getEnrollmentStatus()))
                                                 .count())
                                 .build();
+        }
+
+        @Override
+        public boolean isStudentEnrolled(UUID studentId, UUID courseId) {
+                return enrollmentPersistencePort.existsByStudentIdAndCourseId(studentId, courseId);
         }
 }
