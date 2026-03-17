@@ -2,6 +2,7 @@ package com.growup.backend.infrastructure.security;
 
 import com.growup.backend.domain.model.User;
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.SignatureException;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -34,22 +35,6 @@ public class JwtProvider {
             key = Keys.hmacShaKeyFor(secret.getBytes());
         }
     }
-
-    // public String generateToken(Authentication authentication) {
-    // // En un caso real, aquí extraemos el UserDetails
-    // String username = authentication.getName();
-
-    // Date now = new Date();
-    // Date expiryDate = new Date(now.getTime() + expiration);
-
-    // return Jwts.builder()
-    // .setId(authentication.getPrincipal().toString())
-    // .setSubject(username)
-    // .setIssuedAt(now)
-    // .setExpiration(expiryDate)
-    // .signWith(key, SignatureAlgorithm.HS256)
-    // .compact();
-    // }
 
     // Sobrecarga para generar token desde username directamente (útil para login
     // manual)
@@ -86,14 +71,34 @@ public class JwtProvider {
                 .getBody();
     }
 
-    public boolean validateToken(String token) {
+    /**
+     * Valida el token y devuelve null si es válido, o un mensaje de error si no lo
+     * es.
+     */
+    public String getValidationError(String token) {
         try {
-            // System.out.println("GrowUp-Log: JwtProvider - Validando token: " + token);
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
-            return true;
+            return null;
+        } catch (ExpiredJwtException e) {
+            log.warn("GrowUp-Log: JwtProvider - Token expirado: {}", e.getMessage());
+            return "El token de sesión ha caducado.";
+        } catch (MalformedJwtException e) {
+            log.warn("GrowUp-Log: JwtProvider - Token malformado: {}", e.getMessage());
+            return "El token de sesión está mal formado.";
+        } catch (SignatureException e) {
+            log.warn("GrowUp-Log: JwtProvider - Firma inválida: {}", e.getMessage());
+            return "La firma del token es inválida.";
         } catch (JwtException e) {
-            log.error("GrowUp-Log: JwtProvider - Error al validar el token: {}", e.getMessage());
-            return false;
+            log.warn("GrowUp-Log: JwtProvider - Error de JWT: {}", e.getMessage());
+            return "Token de sesión inválido.";
+        } catch (Exception e) {
+            log.error("GrowUp-Log: JwtProvider - Error inesperado: {}", e.getMessage());
+            return "Error al validar la sesión.";
         }
+    }
+
+    @Deprecated
+    public boolean validateToken(String token) {
+        return getValidationError(token) == null;
     }
 }
