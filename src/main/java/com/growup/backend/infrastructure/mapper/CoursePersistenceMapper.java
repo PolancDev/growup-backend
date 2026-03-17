@@ -90,6 +90,7 @@ public class CoursePersistenceMapper {
         module.setId(entity.getId());
         module.setTitle(entity.getTitle());
         module.setDescription(entity.getDescription());
+        module.setOrder(entity.getOrder());
         module.setTopics(mapTopicListToDomain(entity.getTopics()));
         module.setVersion(entity.getVersion());
         return module;
@@ -103,6 +104,7 @@ public class CoursePersistenceMapper {
         entity.setId(module.getId());
         entity.setTitle(module.getTitle());
         entity.setDescription(module.getDescription());
+        entity.setOrder(module.getOrder());
         List<TopicJpaEntity> topics = mapTopicListToEntity(module.getTopics());
         if (topics != null) {
             topics.forEach(topic -> topic.setModule(entity));
