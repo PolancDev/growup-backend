@@ -107,6 +107,7 @@ public class CourseWebMapper {
         dto.setId(domain.getId());
         dto.setTitle(domain.getTitle());
         dto.setDescription(domain.getDescription());
+        dto.setOrder(domain.getOrder());
         dto.setTopics(mapTopicListToDto(domain.getTopics()));
         return dto;
     }
@@ -119,6 +120,7 @@ public class CourseWebMapper {
         domain.setId(dto.getId());
         domain.setTitle(dto.getTitle());
         domain.setDescription(dto.getDescription());
+        domain.setOrder(dto.getOrder());
         domain.setTopics(mapTopicListToDomain(dto.getTopics()));
         return domain;
     }
