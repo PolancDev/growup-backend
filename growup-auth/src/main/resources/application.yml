@@ -1,0 +1,84 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: growup-auth
+  
+  # Micrometer Tracing Configuration
+  autoconfigure:
+    exclude:
+      - org.springframework.cloud.sleuth.annotation.SleuthAnnotationAutoConfiguration
+  
+  # Zipkin Configuration
+  zipkin:
+    base-url: ${ZIPKIN_BASE_URL:http://localhost:9411}
+    discovery-client-enabled: true
+    sender:
+      type: web
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5433/growup_auth
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  
+  flyway:
+    enabled: true
+    locations: classpath:db/migration/auth
+    baseline-on-migrate: true
+
+# Eureka Client Configuration
+eureka:
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+  client:
+    service-url:
+      default-zone: http://localhost:8761/eureka/
+    registry-fetch-interval-seconds: 10
+
+# OAuth2 Resource Server (Keycloak) Configuration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/growup}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/growup/protocol/openid-connect/certs}
+
+# Keycloak Configuration
+keycloak:
+  issuer: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/growup}
+
+# Actuator endpoints for health monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,circuitbreakers,circuitbreakerdetails,tracing
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+logging:
+  level:
+    com.growup.auth: DEBUG
+    com.netflix.discovery: INFO

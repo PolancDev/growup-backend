@@ -1,0 +1,126 @@
+-- V2__migrate_enrollments_data.sql
+-- Migración de datos de inscripciones desde el monolito
+-- Base de datos origen: growup_db (monolito, puerto 5433)
+-- Base de datos destino: growup_enrollment (microservicio)
+--
+-- IMPORTANTE: Este script debe ejecutarse después de:
+-- 1. Verificar que el monolito tiene datos en las tablas de inscripciones
+-- 2. Asegurar que la base de datos growup_enrollment existe y tiene las tablas
+-- 3. Haber migrado los cursos primero (ya que hay foreign keys)
+
+BEGIN;
+
+-- ============================================
+-- 1. Migrar Enrollments
+-- ============================================
+INSERT INTO enrollments (
+    id,
+    user_id,
+    course_id,
+    progress,
+    last_access_date,
+    enrollment_status,
+    next_lesson_id,
+    created_at,
+    updated_at,
+    deleted_at,
+    version
+)
+SELECT 
+    e.id,
+    e.user_id,
+    e.course_id,
+    COALESCE(e.progress, 0),
+    e.last_access_date,
+    COALESCE(e.enrollment_status, 'NOT_STARTED'),
+    e.next_lesson_id,
+    COALESCE(e.created_at, NOW()),
+    COALESCE(e.updated_at, NOW()),
+    e.deleted_at,
+    COALESCE(e.version, 0)
+FROM growup_db.enrollments e
+WHERE e.deleted_at IS NULL;
+
+-- Contador
+SELECT 'Enrollments migrados: ' || COUNT(*) AS enrollments_migrados FROM enrollments;
+
+-- ============================================
+-- 2. Migrar Reviews
+-- ============================================
+INSERT INTO reviews (
+    id,
+    course_id,
+    student_id,
+    rating,
+    comment,
+    created_at,
+    updated_at,
+    deleted_at,
+    version
+)
+SELECT 
+    r.id,
+    r.course_id,
+    r.student_id,
+    r.rating,
+    r.comment,
+    COALESCE(r.created_at, NOW()),
+    COALESCE(r.updated_at, NOW()),
+    r.deleted_at,
+    COALESCE(r.version, 0)
+FROM growup_db.reviews r
+WHERE r.deleted_at IS NULL;
+
+-- Contador
+SELECT 'Reviews migrados: ' || COUNT(*) AS reviews_migrados FROM reviews;
+
+-- ============================================
+-- 3. Migrar Activities
+-- ============================================
+INSERT INTO activities (
+    id,
+    user_id,
+    action,
+    target,
+    time,
+    type,
+    updated_at,
+    deleted_at,
+    version
+)
+SELECT 
+    a.id,
+    a.user_id,
+    a.action,
+    a.target,
+    COALESCE(a.time, NOW()),
+    a.type,
+    COALESCE(a.updated_at, NOW()),
+    a.deleted_at,
+    COALESCE(a.version, 0)
+FROM growup_db.activities a
+WHERE a.deleted_at IS NULL;
+
+-- Contador
+SELECT 'Activities migradas: ' || COUNT(*) AS activities_migradas FROM activities;
+
+COMMIT;
+
+-- ============================================
+-- Verificación post-migración
+-- ============================================
+SELECT 
+    'enrollments' AS tabla,
+    COUNT(*) AS total
+FROM enrollments
+UNION ALL
+SELECT 
+    'reviews',
+    COUNT(*)
+FROM reviews
+UNION ALL
+SELECT 
+    'activities',
+    COUNT(*)
+FROM activities
+ORDER BY tabla;

@@ -1,0 +1,134 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: growup-gateway
+  main:
+    web-application-type: reactive
+  # Deshabilitar Zipkin temporalmente
+  autoconfigure:
+    exclude:
+      - org.springframework.cloud.sleuth.springnative.condition.ConditionalOnSleuthNative
+  zipkin:
+    enabled: false
+  
+  # OAuth2 Resource Server (Keycloak) Configuration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/growup}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/growup/protocol/openid-connect/certs}
+  
+  cloud:
+    gateway:
+      # Métricas habilitadas
+      metrics:
+        enabled: true
+        use-global-predicate: true
+      
+      # Rutas dinámicas usando Discovery Client
+      discovery:
+        locator:
+          enabled: false
+          lower-case-service-id: true
+          url-expression: "'lb://' + serviceId"
+      
+      # Filtros globales
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:4200"
+              - "http://localhost:3000"
+              - "http://127.0.0.1:4200"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            exposedHeaders:
+              - Authorization
+              - X-User-Id
+              - X-User-Email
+              - X-User-Roles
+              - X-User-Name
+            allowCredentials: true
+            maxAge: 3600
+      
+      default-filters:
+        # Retry automático para requests idempotentes
+        - name: Retry
+          args:
+            retries: 3
+            series: SERVER_ERROR
+            methods: GET,POST
+            exceptions: java.io.IOException,java.net.ConnectException
+
+      # Rutas a servicios
+      routes:
+        # Auth Service
+        - id: auth-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1/auth/**
+        
+        # Course Service
+        - id: course-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/courses/**
+        
+        # Enrollment Service
+        - id: enrollment-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/student/**
+        
+        # Notification Service
+        - id: notification-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/notifications/**
+        
+        # Health endpoints - público
+        - id: actuator-health
+          uri: http://localhost:8080
+          predicates:
+            - Path=/actuator/health
+          filters:
+            - SetPath=/health
+
+# Keycloak Configuration
+keycloak:
+  issuer: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/growup}
+  callback: ${KEYCLOAK_CALLBACK_URL:http://localhost:4200/auth/callback}
+   
+# Configuración de HTTP Client para el Gateway
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  gateway:
+    metrics:
+      enabled: true
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.loadbalancer: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{traceId:-},%X{spanId:-}] %-5level %logger{36} - %msg%n"

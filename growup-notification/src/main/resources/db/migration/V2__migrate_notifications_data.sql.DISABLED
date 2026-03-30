@@ -1,0 +1,54 @@
+-- V2__migrate_notifications_data.sql
+-- Migración de datos de notificaciones desde el monolito
+-- Base de datos origen: growup_db (monolito, puerto 5433)
+-- Base de datos destino: growup_notification (microservicio)
+--
+-- IMPORTANTE: Este script debe ejecutarse después de:
+-- 1. Verificar que el monolito tiene datos en la tabla notifications
+-- 2. Asegurar que la base de datos growup_notification existe y tiene las tablas
+
+BEGIN;
+
+-- ============================================
+-- 1. Migrar Notifications
+-- ============================================
+INSERT INTO notifications (
+    id,
+    user_id,
+    title,
+    message,
+    date,
+    read,
+    type,
+    link,
+    updated_at,
+    deleted_at,
+    version
+)
+SELECT 
+    n.id,
+    n.user_id,
+    n.title,
+    n.message,
+    COALESCE(n.date, NOW()),
+    COALESCE(n.read, FALSE),
+    COALESCE(n.type, 'GENERAL'),
+    n.link,
+    COALESCE(n.updated_at, NOW()),
+    n.deleted_at,
+    COALESCE(n.version, 0)
+FROM growup_db.notifications n
+WHERE n.deleted_at IS NULL;
+
+-- Contador
+SELECT 'Notificaciones migradas: ' || COUNT(*) AS notifications_migradas FROM notifications;
+
+COMMIT;
+
+-- ============================================
+-- Verificación post-migración
+-- ============================================
+SELECT 
+    'notifications' AS tabla,
+    COUNT(*) AS total
+FROM notifications;
