@@ -1,215 +1,254 @@
-# 🌱 GrowUp Backend API
+# GrowUp Backend - Arquitectura de Microservicios
 
-## API-First + Hexagonal Architecture with Spring Boot
+## Descripción
 
-Este proyecto implementa el backend de la plataforma **GrowUp** utilizando una **Arquitectura Hexagonal (Puertos y Adaptadores)** combinada con un enfoque **API-First** mediante OpenAPI, Spring Boot y MapStruct.
+Backend de la plataforma GrowUp basado en arquitectura de microservicios con Spring Boot 3.x y Java 17.
 
-## 🏗️ Arquitectura Hexagonal
-
-### Diagrama de Arquitectura General
-
-```mermaid
-graph TB
-    subgraph "Infrastructure Layer"
-        REST[Web Adapters / Delegates]
-        JPA[Persistence Adapters]
-        DB[(PostgreSQL)]
-        SWAGGER[Swagger UI]
-        SECURITY[Security Adapters / JWT]
-    end
-
-    subgraph "Application Layer"
-        SERVICES[Application Services]
-    end
-
-    subgraph "Domain Layer"
-        MODELS[Domain Models<br/>User, Course, etc.]
-        PORTS_IN[Input Ports<br/>Use Cases]
-        PORTS_OUT[Output Ports<br/>Secondary Interfaces]
-        LOGIC[Business Logic]
-    end
-
-    subgraph "External"
-        CLIENT[Frontend / Mobile]
-        OPENAPI[OpenAPI Spec<br/>YAML]
-    end
-
-    CLIENT --> REST
-    OPENAPI --> REST
-    REST --> PORTS_IN
-    PORTS_IN --> SERVICES
-    SERVICES --> PORTS_OUT
-    SERVICES --> MODELS
-    PORTS_OUT --> JPA
-    PORTS_OUT --> SECURITY
-    JPA --> DB
-    REST --> SWAGGER
-
-    classDef domain fill:#e1f5fe,stroke:#01579b
-    classDef application fill:#f3e5f5,stroke:#4a148c
-    classDef infrastructure fill:#fff3e0,stroke:#e65100
-
-    class MODELS,LOGIC,PORTS_IN,PORTS_OUT domain
-    class SERVICES application
-    class REST,JPA,DB,SWAGGER,SECURITY infrastructure
-```
-
-### Flujo de Datos API-First
-
-```mermaid
-sequenceDiagram
-    participant C as Cliente HTTP (Frontend)
-    participant R as Web Adapter (Delegate)
-    participant S as Application Service
-    participant P as Repository Port (Output)
-    participant A as Persistence Adapter
-    participant D as Base de Datos
-
-    Note over C,D: Flujo de ejemplo: Registro de Usuario
-    C->>R: POST /auth/register
-    R->>R: Validar DTO (Generado por OpenAPI)
-    R->>R: Mapear DTO → Domain (MapStruct)
-    R->>S: register(user, password)
-    S->>S: Aplicar lógica de negocio (Hashing, etc.)
-    S->>P: save(user)
-    P->>A: save(user)
-    A->>A: Mapear Dominio → JPA Entity
-    A->>D: INSERT user
-    D-->>A: Entity persistida
-    A->>A: Mapear Entity → Dominio
-    A-->>P: User (Domain Model)
-    P-->>S: User (Domain Model)
-    S-->>R: User (Domain Model)
-    R->>R: Mapear Dominio → ResponseDTO
-    R-->>C: 201 AuthResponse (DTO)
-```
-
-## 📁 Estructura del Proyecto
+## Arquitectura del Sistema
 
 ```
-src/main/java/com/growup/backend/
-├── 🟦 domain/                          # Capa de Dominio (Núcleo)
-│   ├── model/                          # Modelos de negocio puros (POJOs)
-│   │   ├── User.java
-│   │   ├── Course.java
-│   │   ├── Enrollment.java
-│   │   └── ...
-│   └── port/                           # Puertos del Dominio (Contratos)
-│       ├── in/                         # Puertos de Entrada (Casos de Uso)
-│       │   ├── AuthInPort.java
-│       │   ├── CourseInPort.java
-│       │   └── ...
-│       └── out/                        # Puertos de Salida (Interfaces de Infraestructura)
-│           ├── UserPersistencePort.java
-│           ├── TokenGeneratorPort.java
-│           └── ...
-│
-├── 🟪 application/                     # Capa de Aplicación
-│   └── service/                       # Servicios de aplicación
-│       ├── AuthService.java
-│       ├── CourseService.java
-│       └── ...
-│
-└── 🟨 infrastructure/                  # Capa de Infraestructura
-    ├── adapter/
-    │   ├── web/                       # Adaptadores de Entrada (REST)
-    │   │   ├── mapper/                # Mappers DTO ↔ Dominio
-    │   │   ├── AutenticacinWebAdapter.java
-    │   │   ├── CursosWebAdapter.java
-    │   │   └── ...
-    │   ├── persistence/               # Adaptadores de Salida (Persistencia)
-    │   │   ├── jpa/                   # Repositorios y Entidades JPA
-    │   │   ├── CoursePersistenceAdapter.java
-    │   │   └── ...
-    │   └── security/                  # Adaptadores de Seguridad
-    │       └── JwtTokenGeneratorAdapter.java
-    ├── mapper/                        # Mappers Dominio ↔ JPA Entity
-    ├── exception/                     # Gestión de excepciones global
-    └── config/                        # Configuración de infraestructura
+┌─────────────────────────────────────────────────────────────────┐
+│                         Cliente (Frontend)                      │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    API Gateway (Puerto 8080)                    │
+│                  (Spring Cloud Gateway)                          │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+        ┌───────────────────────┼───────────────────────┐
+        ▼                       ▼                       ▼
+┌───────────────┐     ┌───────────────┐     ┌───────────────┐
+│   Auth Service│     │  Course Service│     │Enrollment Svc │
+│  (Puerto 8081)│     │  (Puerto 8082) │     │ (Puerto 8083)  │
+└───────────────┘     └───────────────┘     └───────────────┘
+        │                       │                       │
+        └───────────────────────┼───────────────────────┘
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              Eureka Discovery (Puerto 8761)                    │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              Keycloak (Puerto 8180) - OAuth2                    │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## 🔄 Mapeo entre Capas
+## Microservicios
 
-### Diagrama de Transformación
+| Servicio | Puerto | Descripción |
+|----------|--------|-------------|
+| API Gateway | 8080 | Punto de entrada, enrutamiento, autenticación |
+| Discovery | 8761 | Service Registry con Eureka |
+| Auth Service | 8081 | Autenticación y gestión de usuarios |
+| Course Service | 8082 | Gestión de cursos y lecciones |
+| Enrollment Service | 8083 | Matrículas y progreso de estudiantes |
+| Notification Service | 8084 | Notificaciones y emails |
 
-```mermaid
-graph LR
-    subgraph "Capa API (OpenAPI)"
-        DTO_IN[LoginRequest / RegisterRequest]
-        DTO_OUT[AuthResponse / User DTO]
-    end
+## Requisitos
 
-    subgraph "Capa de Dominio"
-        DOMAIN[User / Course<br/>Domain Model]
-    end
+- **Java**: JDK 17
+- **Maven**: 3.8+
+- **Docker**: Para Keycloak y servicios externos
+- **Docker Compose**: Para levantar toda la infraestructura
 
-    subgraph "Capa de Persistencia (JPA)"
-        ENTITY[UserJpaEntity / CourseJpaEntity]
-    end
+## Cómo Levantar el Proyecto
 
-    DTO_IN -->|UserWebMapper| DOMAIN
-    DOMAIN -->|UserWebMapper| DTO_OUT
-    DOMAIN -->|UserPersistenceMapper| ENTITY
-    ENTITY -->|UserPersistenceMapper| DOMAIN
+### 1. Clonar y preparar
 
-    classDef api fill:#ffeb3b,stroke:#fbc02d,color:#000
-    classDef domain fill:#4caf50,stroke:#2e7d32,color:#fff
-    classDef persistence fill:#2196f3,stroke:#1565c0,color:#fff
-
-    class DTO_IN,DTO_OUT api
-    class DOMAIN domain
-    class ENTITY persistence
+```bash
+git clone https://github.com/AbiPol/growup-backend.git
+cd growup-backend
 ```
 
-## 🛠️ Tecnologías Utilizadas
+### 2. Levantar infraestructura con Docker Compose
 
-| Capa              | Tecnología                   | Propósito                                  |
-| ----------------- | ---------------------------- | ------------------------------------------ |
-| **API-First**     | OpenAPI 3.0 + Maven Plugin   | Generación de código a partir del contrato |
-| **REST**          | Spring Boot Web              | Controladores y endpoints REST             |
-| **Seguridad**     | Spring Security + JWT        | Autenticación y Autorización               |
-| **Mapeo**         | MapStruct                    | Transformaciones automáticas entre capas   |
-| **Persistencia**  | Spring Data JPA + PostgreSQL | Capa de datos                              |
-| **Documentación** | SpringDoc OpenAPI            | Interfaz Swagger UI automática             |
-| **Utilidades**    | Lombok                       | Reducción de código boilerplat             |
-
-## 🚀 Configuración API-First
-
-### 1. Especificación OpenAPI
-El contrato de la API se define en `src/main/resources/api-docs.yaml`.
-
-### 2. Generación Automática
-Al compilar con Maven, el plugin genera las interfaces de los controladores y los DTOs en la carpeta `target/generated-sources/openapi`.
-
-### 3. Implementación del Adaptador
-Nuestros adaptadores web implementan los "Delegates" generados:
-```java
-@Component
-@RequiredArgsConstructor
-public class AutenticacinWebAdapter implements AutenticacinApiDelegate {
-    private final AuthInPort authInPort;
-    private final UserWebMapper userMapper;
-
-    @Override
-    public ResponseEntity<AuthResponse> authRegisterPost(RegisterRequest registerRequest) {
-        User user = userMapper.toDomain(registerRequest);
-        User registered = authInPort.register(user, registerRequest.getPassword());
-        // ...
-    }
-}
+```bash
+docker-compose up -d
 ```
 
-## 🎯 Principios de Arquitectura Aplicados
+Esto levantará:
+- PostgreSQL (puerto 5432)
+- Keycloak (puerto 8180)
+- RabbitMQ (puerto 5672)
 
-1.  **Inversión de Dependencias**: El dominio no depende de la infraestructura; los adaptadores dependen de los puertos (interfaces en el dominio).
-2.  **Puertos y Adaptadores**: Interfaces claras que permiten cambiar la tecnología de persistencia o comunicación sin tocar la lógica de negocio.
-3.  **Testabilidad**: La lógica de negocio está aislada y puede probarse con tests unitarios sin levantar una base de datos.
-4.  **Contrato Primero (API-First)**: El contrato es la fuente de verdad única para el frontend y el backend.
+### 3. Compilar todos los microservicios
 
-## 📚 Recursos Adicionales
+```bash
+./mvnw clean install -DskipTests
+```
 
-- **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- **API Docs**: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
+### 4. Arrancar servicios
+
+**Opción A: Arrancar todos manualmente (en orden)**
+
+```bash
+# 1. Discovery (debe arrancar primero)
+cd growup-discovery
+./mvnw spring-boot:run
+
+# 2. Auth Service
+cd growup-auth
+./mvnw spring-boot:run
+
+# 3. Course Service
+cd growup-course
+./mvnw spring-boot:run
+
+# 4. Enrollment Service
+cd growup-enrollment
+./mvnw spring-boot:run
+
+# 5. Notification Service
+cd growup-notification
+./mvnw spring-boot:run
+
+# 6. API Gateway (último)
+cd growup-gateway
+./mvnw spring-boot:run
+```
+
+**Opción B: Usar scripts de startup**
+
+```bash
+# Ejecutar script de démarrage
+./scripts/start-all.sh
+```
+
+### 5. Verificar servicios
+
+- **Eureka Dashboard**: http://localhost:8761
+- **API Gateway**: http://localhost:8080
+- **Keycloak Admin**: http://localhost:8180 (admin/admin)
+
+## Endpoints Principales
+
+### Auth Service (8081)
+- `POST /api/auth/login` - Iniciar sesión
+- `POST /api/auth/register` - Registrar usuario
+- `GET /api/auth/me` - Obtener usuario actual
+
+### Course Service (8082)
+- `GET /api/courses` - Listar cursos
+- `GET /api/courses/{id}` - Obtener curso
+- `POST /api/courses` - Crear curso
+- `PUT /api/courses/{id}` - Actualizar curso
+
+### Enrollment Service (8083)
+- `GET /api/enrollments` - Listar matrículas
+- `POST /api/enrollments` - Matricularse en curso
+- `GET /api/enrollments/student/{id}` - Matrículas de estudiante
+
+### Notification Service (8084)
+- `POST /api/notifications/send` - Enviar notificación
+- `GET /api/notifications/user/{id}` - Notificaciones de usuario
+
+## Autenticación
+
+El sistema usa **Keycloak** como proveedor de OAuth2:
+
+1. Accede a http://localhost:8180
+2. Inicia sesión como admin (admin/admin)
+3. Crea un realm llamado "growup"
+4. Configura los clients para cada microservicio
+5. Los tokens JWT se validan en el API Gateway
+
+### Flujo de Autenticación
+
+```
+1. Cliente → API Gateway: Solicita recurso
+2. Gateway → Keycloak: Valida token JWT
+3. Keycloak → Gateway: Token válido
+4. Gateway → Microservicio: Pide recurso
+5. Microservicio → Cliente: Respuesta
+```
+
+## Estructura de Directorios
+
+```
+growup-backend/
+├── growup-common/          # Código compartido (DTOs, utilities)
+├── growup-discovery/      # Eureka Server
+├── growup-gateway/        # API Gateway
+├── growup-auth/           # Servicio de autenticación
+├── growup-course/         # Servicio de cursos
+├── growup-enrollment/     # Servicio de matrículas
+├── growup-notification/   # Servicio de notificaciones
+├── pom.xml                # Parent POM
+└── README.md              # Este archivo
+```
+
+## Variables de Entorno
+
+### growup-auth
+```env
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/growup_auth
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=postgres
+KEYCLOAK_URL=http://localhost:8180
+```
+
+### growup-course
+```env
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/growup_courses
+```
+
+### growup-enrollment
+```env
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/growup_enrollments
+```
+
+## Cómo Contribuir
+
+1. Crea una rama desde `develop`:
+   ```bash
+   git checkout -b feature/nombre 功能
+   ```
+
+2. Sigue Conventional Commits:
+   ```bash
+   git commit -m "feat(auth): add password reset"
+   ```
+
+3. Push y crea PR a `develop`:
+   ```bash
+   git push origin feature/nombre 功能
+   ```
+
+## Rama Histórica
+
+El código del antiguo monolito está preservado en:
+- Rama: `historic/monolith`
+- Ruta: `src/main/java/com/growup/monolith/`
+
+## Testing
+
+```bash
+# Ejecutar tests de un servicio específico
+cd growup-auth
+./mvnw test
+
+# Ejecutar tests de integración
+./mvnw verify -Pintegration-tests
+```
+
+## Puertos常用
+
+| Servicio | Puerto |
+|----------|--------|
+| API Gateway | 8080 |
+| Auth Service | 8081 |
+| Course Service | 8082 |
+| Enrollment Service | 8083 |
+| Notification Service | 8084 |
+| Discovery (Eureka) | 8761 |
+| Keycloak | 8180 |
+| PostgreSQL | 5432 |
+| RabbitMQ | 5672 |
 
 ---
-🌱 **GrowUp** - *Cultivando el conocimiento a través de una arquitectura limpia.*
+
+**Versión**: 2.0.0-SNAPSHOT  
+**Última Actualización**: 2026-03-30
