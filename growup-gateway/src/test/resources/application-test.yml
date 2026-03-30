@@ -1,0 +1,58 @@
+# Test Configuration for Gateway
+# This profile is used for running integration tests
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: growup-gateway
+  
+  # Disable eureka and service discovery for tests
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - StripPrefix=0
+        - id: course-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/courses/**
+          filters:
+            - StripPrefix=0
+        - id: enrollment-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/student/**,/api/v1/teachers/**
+          filters:
+            - StripPrefix=0
+        - id: notification-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/notifications/**
+          filters:
+            - StripPrefix=0
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+# JWT Configuration - same secret as test tokens
+jwt:
+  secret: GrowUpSecretKeyForJWTTokenValidationMinimum256BitsRequired!
+
+# Management
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# Disable most logging for cleaner test output
+logging:
+  level:
+    root: WARN
+    com.growup.gateway: DEBUG
+    org.springframework.cloud.gateway: WARN

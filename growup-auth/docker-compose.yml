@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Auth Service
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: growup-auth-db
+    environment:
+      POSTGRES_DB: growup_auth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Auth Service Application
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: growup-auth
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/growup_auth
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: GrowUpSecretKeyForJWTTokenValidationMinimum256BitsRequired!
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC"
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - growup-network
+
+volumes:
+  postgres_auth_data:
+
+networks:
+  growup-network:
+    driver: bridge

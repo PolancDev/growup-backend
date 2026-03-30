@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Enrollment Service
+  postgres-enrollment:
+    image: postgres:15-alpine
+    container_name: growup-enrollment-db
+    environment:
+      POSTGRES_DB: growup_enrollment
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_enrollment_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Enrollment Service Application
+  enrollment:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: growup-enrollment
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-enrollment:5432/growup_enrollment
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      AUTH_SERVICE_URL: http://host.docker.internal:8081
+      COURSE_SERVICE_URL: http://host.docker.internal:8082
+      JWT_SECRET: GrowUpSecretKeyForJWTTokenValidationMinimum256BitsRequired!
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC"
+    depends_on:
+      postgres-enrollment:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - growup-network
+
+volumes:
+  postgres_enrollment_data:
+
+networks:
+  growup-network:
+    driver: bridge

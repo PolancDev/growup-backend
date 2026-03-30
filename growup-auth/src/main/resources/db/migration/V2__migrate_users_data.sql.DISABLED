@@ -1,0 +1,127 @@
+-- =============================================================================
+-- V2__migrate_users_data.sql
+-- =============================================================================
+-- Migración de datos de usuarios desde el esquema growup_backend al esquema growup_auth
+-- Fecha: 2026-03-23
+-- =============================================================================
+
+-- NOTA: Este script está diseñado para ejecutarse cuando se migran datos del
+-- esquema growup_backend (monolítico) al nuevo esquema growup_auth.
+--
+-- El esquema growup_backend usa soft-delete (deleted_at) mientras que 
+-- growup_auth usa is_active booleano.
+--
+-- PRE-REQUISITOS:
+-- 1. La tabla growup_backend.users debe estar accesible (misma DB o linked server)
+-- 2. Los usuarios existentes tienen passwords hasheadas con BCrypt
+-- 3. Los roles son: STUDENT, TEACHER, ADMIN
+
+-- =============================================================================
+-- VERIFICAR DATOS ANTES DE MIGRACIÓN
+-- =============================================================================
+
+-- Contar usuarios existentes en growup_backend (excluyendo soft-deleted)
+-- SELECT COUNT(*) 
+-- FROM growup_backend.users 
+-- WHERE deleted_at IS NULL;
+
+-- =============================================================================
+-- MIGRACIÓN DE USUARIOS ACTIVOS
+-- =============================================================================
+
+-- Insertar usuarios desde el esquema antiguo al nuevo
+-- Se filtran usuarios activos (deleted_at IS NULL) y se convierten las columnas
+
+INSERT INTO users (
+    id,
+    name,
+    email,
+    password_hash,
+    role,
+    is_active,
+    avatar,
+    bio,
+    join_date,
+    version
+)
+SELECT 
+    id,
+    name,
+    email,
+    password,                    -- password_hash en nuevo esquema
+    role::VARCHAR(50),           -- Convertir enum a string
+    is_active,
+    avatar_url,                  -- avatar_url -> avatar
+    bio,
+    join_date,
+    COALESCE(version, 0)         -- Default version si es null
+FROM growup_backend.users
+WHERE deleted_at IS NULL         -- Solo usuarios no eliminados
+  AND is_active = true;          -- Solo usuarios activos
+
+-- =============================================================================
+-- MIGRACIÓN DE USUARIOS INACTIVOS (OPCIONAL)
+-- =============================================================================
+
+-- Si se desea migrar también usuarios inactivos (para conservación de datos):
+-- Descomentar siguiente bloque si es necesario
+
+-- INSERT INTO users (
+--     id,
+--     name,
+--     email,
+--     password_hash,
+--     role,
+--     is_active,
+--     avatar,
+--     bio,
+--     join_date,
+--     version
+-- )
+-- SELECT 
+--     id,
+--     name,
+--     email,
+--     password,
+--     role::VARCHAR(50),
+--     false,                     -- is_active = false para users con deleted_at
+--     avatar_url,
+--     bio,
+--     join_date,
+--     COALESCE(version, 0)
+-- FROM growup_backend.users
+-- WHERE deleted_at IS NOT NULL;
+
+-- =============================================================================
+-- VERIFICACIÓN POST-MIGRACIÓN
+-- =============================================================================
+
+-- Verificar que la migración fue exitosa
+-- SELECT COUNT(*) AS total_users FROM users;
+
+-- Comparar counts entre esquemas
+-- SELECT 
+--     (SELECT COUNT(*) FROM growup_backend.users WHERE deleted_at IS NULL AND is_active = true) AS origen_activos,
+--     (SELECT COUNT(*) FROM users) AS destino_total;
+
+-- Verificar que no hay emails duplicados
+-- SELECT email, COUNT(*) 
+-- FROM users 
+-- GROUP BY email 
+-- HAVING COUNT(*) > 1;
+
+-- Listar usuarios migrados por rol
+-- SELECT role, COUNT(*) 
+-- FROM users 
+-- GROUP BY role;
+
+-- =============================================================================
+-- LIMPIEZA (OPCIONAL)
+-- =============================================================================
+
+-- Una vez verificada la migración, se puede limpiar la tabla antigua:
+-- DROP TABLE IF EXISTS growup_backend.users CASCADE;
+
+-- Opcional: crear índice adicional para búsquedas frecuentes
+-- CREATE INDEX idx_users_is_active ON users(is_active);
+

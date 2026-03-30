@@ -1,0 +1,141 @@
+-- V2__migrate_courses_data.sql
+-- Migración de datos de cursos desde el monolito
+-- Base de datos origen: growup_db (monolito, puerto 5433)
+-- Base de datos destino: growup_course (microservicio, puerto 5433 - pero contenedor diferente)
+--
+-- IMPORTANTE: Este script debe ejecutarse manualmente después de:
+-- 1. Verificar que el monolito tiene datos en la tabla courses
+-- 2. Asegurar que la base de datos growup_course existe y tiene las tablas
+--
+-- El script asume que ambas bases de datos son accesibles desde el mismo host
+-- Para ejecutar desde Docker: docker exec -i growup-course-db psql -U postgres -d growup_course -f /docker-entrypoint-initdb.d/V2__migrate_courses_data.sql
+-- O desde host: psql -h localhost -p 5433 -U postgres -d growup_course -f V2__migrate_courses_data.sql
+
+BEGIN;
+
+-- ============================================
+-- 1. Migrar Courses
+-- ============================================
+INSERT INTO courses (
+    id, 
+    name, 
+    description, 
+    image_url, 
+    category, 
+    level, 
+    price, 
+    duration, 
+    start_date, 
+    end_date, 
+    publication_status, 
+    created_at, 
+    updated_at, 
+    deleted_at, 
+    instructor_id, 
+    enrolled_count, 
+    version
+)
+SELECT 
+    id,
+    name,
+    description,
+    image_url,
+    category,
+    COALESCE(level, 'BEGINNER'),
+    COALESCE(price, 0),
+    duration,
+    COALESCE(start_date, NOW()),
+    end_date,
+    COALESCE(publication_status, 'BORRADOR'),
+    COALESCE(created_at, NOW()),
+    COALESCE(updated_at, NOW()),
+    deleted_at,
+    instructor_id,
+    COALESCE(enrolled_count, 0),
+    COALESCE(version, 0)
+FROM growup_db.courses
+WHERE deleted_at IS NULL;
+
+-- Contador
+SELECT 'Courses migrados: ' || COUNT(*) AS courses_migrados FROM courses;
+
+-- ============================================
+-- 2. Migrar Course Modules
+-- ============================================
+INSERT INTO course_modules (
+    id,
+    title,
+    description,
+    module_order,
+    course_id,
+    created_at,
+    updated_at,
+    deleted_at,
+    version
+)
+SELECT 
+    cm.id,
+    cm.title,
+    cm.description,
+    cm.module_order,
+    cm.course_id,
+    COALESCE(cm.created_at, NOW()),
+    COALESCE(cm.updated_at, NOW()),
+    cm.deleted_at,
+    COALESCE(cm.version, 0)
+FROM growup_db.course_modules cm
+WHERE cm.deleted_at IS NULL
+  AND EXISTS (SELECT 1 FROM courses c WHERE c.id = cm.course_id);
+
+-- Contador
+SELECT 'Course Modules migrados: ' || COUNT(*) AS modules_migrados FROM course_modules;
+
+-- ============================================
+-- 3. Migrar Module Topics
+-- ============================================
+INSERT INTO module_topics (
+    id,
+    title,
+    duration,
+    module_id,
+    created_at,
+    updated_at,
+    deleted_at,
+    version
+)
+SELECT 
+    mt.id,
+    mt.title,
+    COALESCE(mt.duration, 0),
+    mt.module_id,
+    COALESCE(mt.created_at, NOW()),
+    COALESCE(mt.updated_at, NOW()),
+    mt.deleted_at,
+    COALESCE(mt.version, 0)
+FROM growup_db.module_topics mt
+WHERE mt.deleted_at IS NULL
+  AND EXISTS (SELECT 1 FROM course_modules cmo WHERE cmo.id = mt.module_id);
+
+-- Contador
+SELECT 'Module Topics migrados: ' || COUNT(*) AS topics_migrados FROM module_topics;
+
+COMMIT;
+
+-- ============================================
+-- Verificación post-migración
+-- ============================================
+SELECT 
+    'courses' AS tabla,
+    COUNT(*) AS total
+FROM courses
+UNION ALL
+SELECT 
+    'course_modules',
+    COUNT(*)
+FROM course_modules
+UNION ALL
+SELECT 
+    'module_topics',
+    COUNT(*)
+FROM module_topics
+ORDER BY tabla;

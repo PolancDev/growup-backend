@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Course Service
+  postgres-course:
+    image: postgres:15-alpine
+    container_name: growup-course-db
+    environment:
+      POSTGRES_DB: growup_course
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_course_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Course Service Application
+  course:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: growup-course
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-course:5432/growup_course
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      AUTH_SERVICE_URL: http://host.docker.internal:8081
+      JWT_SECRET: GrowUpSecretKeyForJWTTokenValidationMinimum256BitsRequired!
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC"
+    depends_on:
+      postgres-course:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - growup-network
+
+volumes:
+  postgres_course_data:
+
+networks:
+  growup-network:
+    driver: bridge
