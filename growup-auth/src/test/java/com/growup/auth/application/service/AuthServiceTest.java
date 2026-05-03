@@ -1,10 +1,10 @@
 package com.growup.auth.application.service;
 
+import com.growup.auth.domain.exception.InvalidCredentialsException;
 import com.growup.auth.domain.model.User;
 import com.growup.auth.domain.port.out.TokenGeneratorPort;
 import com.growup.auth.domain.port.out.UserPersistencePort;
 import com.growup.common.domain.model.enums.Role;
-import com.growup.common.infrastructure.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,7 +13,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.OffsetDateTime;
@@ -40,9 +39,6 @@ class AuthServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private AuthenticationManager authenticationManager;
 
     @InjectMocks
     private AuthService authService;
@@ -72,9 +68,11 @@ class AuthServiceTest {
         @Test
         @DisplayName("Debería hacer login correctamente cuando credenciales son válidas")
         void testLogin_Success() {
-            // Given: Usuario existe en la base de datos
+            // Given: Usuario existe en la base de datos y contraseña es correcta
             when(userPersistencePort.findByEmail("maria@ejemplo.com"))
                     .thenReturn(Optional.of(sampleUser));
+            when(passwordEncoder.matches(anyString(), anyString()))
+                    .thenReturn(true);
 
             // When: Se llama al método login
             User result = authService.login("maria@ejemplo.com", "password123");
@@ -83,34 +81,35 @@ class AuthServiceTest {
             assertNotNull(result);
             assertEquals("maria@ejemplo.com", result.getEmail());
             assertEquals("María García", result.getName());
-            verify(authenticationManager).authenticate(any());
             verify(userPersistencePort).findByEmail("maria@ejemplo.com");
+            verify(passwordEncoder).matches(eq("password123"), eq("encodedPassword"));
         }
 
         @Test
-        @DisplayName("Debería lanzar excepción BadCredentials cuando la contraseña es inválida")
+        @DisplayName("Debería lanzar InvalidCredentialsException cuando la contraseña es inválida")
         void testLogin_InvalidPassword() {
             // Given: Usuario existe pero contraseña inválida
-            doThrow(new org.springframework.security.authentication.BadCredentialsException("Credenciales inválidas"))
-                    .when(authenticationManager).authenticate(any());
+            when(userPersistencePort.findByEmail("maria@ejemplo.com"))
+                    .thenReturn(Optional.of(sampleUser));
+            when(passwordEncoder.matches(anyString(), anyString()))
+                    .thenReturn(false);
 
-            // When/Then: Lanza excepción
+            // When/Then: Lanza excepción InvalidCredentialsException
             assertThrows(
-                    org.springframework.security.authentication.BadCredentialsException.class,
+                    InvalidCredentialsException.class,
                     () -> authService.login("maria@ejemplo.com", "wrongPassword")
             );
         }
 
         @Test
-        @DisplayName("Debería lanzar ResourceNotFoundException cuando el usuario no existe")
+        @DisplayName("Debería lanzar InvalidCredentialsException cuando el usuario no existe")
         void testLogin_UserNotFound() {
             // Given: Usuario no existe en la base de datos
-            doAnswer(inv -> null).when(authenticationManager).authenticate(any());
             when(userPersistencePort.findByEmail("noexiste@ejemplo.com"))
                     .thenReturn(Optional.empty());
 
-            // When/Then: Lanza ResourceNotFoundException
-            assertThrows(ResourceNotFoundException.class,
+            // When/Then: Lanza InvalidCredentialsException (por seguridad no revelamos si existe)
+            assertThrows(InvalidCredentialsException.class,
                     () -> authService.login("noexiste@ejemplo.com", "password123"));
         }
     }
@@ -213,14 +212,14 @@ class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("Debería lanzar ResourceNotFoundException cuando no existe")
+        @DisplayName("Debería lanzar excepción cuando no existe")
         void testGetUser_NotFound() {
             // Given: Usuario no existe
             when(userPersistencePort.findByEmail("noexiste@ejemplo.com"))
                     .thenReturn(Optional.empty());
 
-            // When/Then: Lanza ResourceNotFoundException
-            assertThrows(ResourceNotFoundException.class,
+            // When/Then: Lanza excepción
+            assertThrows(com.growup.common.infrastructure.exception.ResourceNotFoundException.class,
                     () -> authService.getUser("noexiste@ejemplo.com"));
         }
     }

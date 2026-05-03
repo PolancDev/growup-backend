@@ -1,10 +1,9 @@
 package com.growup.common.domain.model.enums;
 
-import com.fasterxml.jackson.annotation.JsonValue;
-
 /**
  * Roles de usuario en el sistema.
  * Compartido entre auth y otros módulos.
+ * Dominio puro: sin anotaciones de frameworks externos (como Jackson).
  */
 public enum Role {
     ADMIN("ADMIN"),
@@ -17,7 +16,6 @@ public enum Role {
         this.value = value;
     }
 
-    @JsonValue
     public String getValue() {
         return value;
     }

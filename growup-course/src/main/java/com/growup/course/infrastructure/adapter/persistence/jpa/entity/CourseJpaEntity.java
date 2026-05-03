@@ -9,6 +9,8 @@ import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -77,11 +79,15 @@ public class CourseJpaEntity {
     @Column(name = "enrolled_count")
     private Integer enrolledCount = 0;
 
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    @OrderBy("order ASC")
+    private List<CourseModuleJpaEntity> modules = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         createdAt = OffsetDateTime.now();
         updatedAt = OffsetDateTime.now();
-        startDate = OffsetDateTime.now();
         deletedAt = null;
         if (enrolledCount == null)
             enrolledCount = 0;

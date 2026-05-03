@@ -4,22 +4,27 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Main application class for the GrowUp API Gateway.
+ * Clase principal de la aplicación para el GrowUp API Gateway.
  * 
- * This gateway acts as the entry point for all microservice requests,
- * providing:
- * - Request routing to backend services
- * - JWT token validation and user information extraction
- * - CORS configuration for frontend integration
- * - Health monitoring endpoints
+ * Este gateway actúa como punto de entrada para todas las peticiones a microservicios,
+ * proporcionando:
+ * - Enrutamiento de peticiones a servicios backend
+ * - Validación de tokens JWT y extracción de información de usuario
+ * - Configuración CORS para integración con frontend
+ * - Endpoints de monitoreo de salud
  * 
- * @author GrowUp Team
+ * @author Equipo GrowUp
  * @version 1.0.0
  */
 @SpringBootApplication
 public class GatewayApplication {
 
-    public static void main(String[] args) {
+    /**
+     * Método principal de la aplicación.
+     *
+     * @param args argumentos de línea de comandos
+     */
+    public static void main(final String[] args) {
         SpringApplication.run(GatewayApplication.class, args);
     }
 }

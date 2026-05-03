@@ -32,7 +32,7 @@ public class NotificationWebAdapter {
     private final NotificationService notificationService;
 
     @GetMapping
-    @Operation(summary = "Get user notifications", description = "Get all notifications for a user")
+    @Operation(summary = "Obtener notificaciones del usuario", description = "Obtiene todas las notificaciones de un usuario")
     public ResponseEntity<List<Map<String, Object>>> getUserNotifications(
             @Parameter(description = "User UUID") @RequestParam UUID userId,
             @Parameter(description = "Filter unread only") @RequestParam(defaultValue = "false") boolean unreadOnly) {
@@ -52,7 +52,7 @@ public class NotificationWebAdapter {
     }
 
     @GetMapping("/unread-count")
-    @Operation(summary = "Get unread count", description = "Get count of unread notifications for a user")
+    @Operation(summary = "Obtener conteo no leídos", description = "Obtiene el conteo de notificaciones no leídas de un usuario")
     public ResponseEntity<Map<String, Object>> getUnreadCount(
             @Parameter(description = "User UUID") @RequestParam UUID userId) {
         log.info("GrowUp-Log: Get unread count for user: {}", userId);
@@ -67,7 +67,7 @@ public class NotificationWebAdapter {
     }
 
     @PostMapping
-    @Operation(summary = "Send notification", description = "Create and send a new notification")
+    @Operation(summary = "Enviar notificación", description = "Crea y envía una nueva notificación")
     public ResponseEntity<Map<String, Object>> sendNotification(@RequestBody Map<String, Object> notificationData) {
         log.info("GrowUp-Log: Send notification: {}", notificationData);
         
@@ -85,7 +85,7 @@ public class NotificationWebAdapter {
     }
 
     @PutMapping("/{id}/read")
-    @Operation(summary = "Mark as read", description = "Mark a notification as read")
+    @Operation(summary = "Marcar como leída", description = "Marca una notificación como leída")
     public ResponseEntity<Map<String, Object>> markAsRead(@PathVariable UUID id) {
         log.info("GrowUp-Log: Mark notification as read: {}", id);
         
@@ -99,7 +99,7 @@ public class NotificationWebAdapter {
     }
 
     @PutMapping("/read-all")
-    @Operation(summary = "Mark all as read", description = "Mark all notifications as read for a user")
+    @Operation(summary = "Marcar todas como leídas", description = "Marca todas las notificaciones como leídas para un usuario")
     public ResponseEntity<Map<String, Object>> markAllAsRead(@RequestBody Map<String, Object> requestData) {
         UUID userId = UUID.fromString(requestData.get("userId").toString());
         log.info("GrowUp-Log: Mark all notifications as read for user: {}", userId);
@@ -119,7 +119,7 @@ public class NotificationWebAdapter {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete notification", description = "Delete a notification")
+    @Operation(summary = "Eliminar notificación", description = "Elimina una notificación")
     public ResponseEntity<Void> deleteNotification(@PathVariable UUID id) {
         log.info("GrowUp-Log: Delete notification: {}", id);
         // Soft delete via JPA

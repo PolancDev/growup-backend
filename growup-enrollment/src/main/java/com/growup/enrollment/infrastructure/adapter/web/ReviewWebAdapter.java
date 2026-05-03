@@ -1,7 +1,7 @@
 package com.growup.enrollment.infrastructure.adapter.web;
 
-import com.growup.enrollment.application.service.ReviewService;
 import com.growup.enrollment.domain.model.Review;
+import com.growup.enrollment.domain.port.in.ReviewInPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 @Tag(name = "Reviews", description = "Course review endpoints")
 public class ReviewWebAdapter {
 
-    private final ReviewService reviewService;
+    private final ReviewInPort reviewService;
 
     @GetMapping("/{courseId}/reviews")
     @Operation(summary = "Get course reviews", description = "Get all reviews for a course")

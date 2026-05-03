@@ -1,20 +1,23 @@
 package com.growup.course.infrastructure.adapter.web;
 
+import com.growup.course.application.dto.CourseRequest;
+import com.growup.course.application.dto.CourseResponse;
+import com.growup.course.application.mapper.CourseDtoMapper;
 import com.growup.course.application.service.CourseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -30,10 +33,11 @@ import java.util.stream.Collectors;
 public class CourseWebAdapter {
 
     private final CourseService courseService;
+    private final CourseDtoMapper courseDtoMapper;
 
     @GetMapping
     @Operation(summary = "Get all courses", description = "Retrieve all courses with optional filters")
-    public ResponseEntity<List<Map<String, Object>>> getCourses(
+    public ResponseEntity<List<CourseResponse>> getCourses(
             @Parameter(description = "Filter by category") @RequestParam(required = false) String category,
             @Parameter(description = "Filter by level") @RequestParam(required = false) String level,
             @Parameter(description = "Filter by status") @RequestParam(required = false) String status) {
@@ -42,44 +46,42 @@ public class CourseWebAdapter {
         var domainCourses = courseService.getAllCourses(null, category, level, status);
 
         return ResponseEntity.ok(domainCourses.stream()
-                .map(this::mapCourseToDto)
+                .map(courseDtoMapper::toResponse)
                 .collect(Collectors.toList()));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get course by ID", description = "Retrieve a specific course by its UUID")
-    public ResponseEntity<Map<String, Object>> getCourseById(
+    public ResponseEntity<CourseResponse> getCourseById(
             @Parameter(description = "Course UUID") @PathVariable UUID id) {
         log.info("GrowUp-Log: CourseWebAdapter - Obteniendo detalles del curso con ID: {}", id);
         var domainCourse = courseService.getCourseById(id);
-        return ResponseEntity.ok(mapCourseToDto(domainCourse));
+        return ResponseEntity.ok(courseDtoMapper.toResponse(domainCourse));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('TEACHER') or hasRole('ADMIN')")
     @Operation(summary = "Create a new course", description = "Create a new course (requires TEACHER or ADMIN role)")
-    public ResponseEntity<Map<String, Object>> createCourse(@RequestBody Map<String, Object> courseData) {
-        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        log.info("GrowUp-Log: CourseWebAdapter - Creando curso por: {}", currentEmail);
+    public ResponseEntity<CourseResponse> createCourse(@Valid @RequestBody CourseRequest request) {
+        UUID currentUserId = getCurrentUserId();
+        log.info("GrowUp-Log: CourseWebAdapter - Creando curso por usuario: {}", currentUserId);
 
-        var domainCourse = mapDtoToCourse(courseData);
-        // Note: instructorId debería obtenerse del token de autenticación
-        // Por ahora, se necesita implementar la lógica para obtener el instructor ID
-        
-        var created = courseService.createCourse(domainCourse, null);
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapCourseToDto(created));
+        var domainCourse = courseDtoMapper.toDomain(request);
+        var created = courseService.createCourse(domainCourse, currentUserId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(courseDtoMapper.toResponse(created));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('TEACHER') or hasRole('ADMIN')")
     @Operation(summary = "Update a course", description = "Update an existing course (requires TEACHER or ADMIN role)")
-    public ResponseEntity<Map<String, Object>> updateCourse(
+    public ResponseEntity<CourseResponse> updateCourse(
             @Parameter(description = "Course UUID") @PathVariable UUID id,
-            @RequestBody Map<String, Object> courseData) {
-        log.info("GrowUp-Log: CourseWebAdapter - Actualizando curso: {}", id);
-        var domainCourse = mapDtoToCourse(courseData);
-        var updated = courseService.updateCourse(id, domainCourse);
-        return ResponseEntity.ok(mapCourseToDto(updated));
+            @Valid @RequestBody CourseRequest request) {
+        UUID currentUserId = getCurrentUserId();
+        log.info("GrowUp-Log: CourseWebAdapter - Actualizando curso: {} por usuario: {}", id, currentUserId);
+        var domainCourse = courseDtoMapper.toDomain(request);
+        var updated = courseService.updateCourse(id, domainCourse, currentUserId);
+        return ResponseEntity.ok(courseDtoMapper.toResponse(updated));
     }
 
     @DeleteMapping("/{id}")
@@ -87,99 +89,27 @@ public class CourseWebAdapter {
     @Operation(summary = "Delete a course", description = "Delete a course (requires ADMIN or TEACHER role)")
     public ResponseEntity<Void> deleteCourse(
             @Parameter(description = "Course UUID") @PathVariable UUID id) {
-        courseService.deleteCourse(id);
+        UUID currentUserId = getCurrentUserId();
+        log.info("GrowUp-Log: CourseWebAdapter - Eliminando curso: {} por usuario: {}", id, currentUserId);
+        courseService.deleteCourse(id, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/syllabus")
     @Operation(summary = "Get course syllabus", description = "Retrieve the syllabus (modules and topics) of a course")
-    public ResponseEntity<List<Map<String, Object>>> getCourseSyllabus(
+    public ResponseEntity<List<com.growup.course.application.dto.CourseModuleDto>> getCourseSyllabus(
             @Parameter(description = "Course UUID") @PathVariable UUID id) {
         log.info("GrowUp-Log: CourseWebAdapter - Obteniendo syllabus del curso: {}", id);
         var domainCourse = courseService.getCourseById(id);
-        var dto = mapCourseToDto(domainCourse);
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> syllabus = (List<Map<String, Object>>) dto.get("syllabus");
-        return ResponseEntity.ok(syllabus);
+        var response = courseDtoMapper.toResponse(domainCourse);
+        return ResponseEntity.ok(response.getSyllabus());
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> mapCourseToDto(com.growup.course.domain.model.Course course) {
-        Map<String, Object> dto = new HashMap<>();
-        dto.put("id", course.getId());
-        dto.put("name", course.getName());
-        dto.put("description", course.getDescription());
-        dto.put("imageUrl", course.getImageUrl());
-        dto.put("category", course.getCategory());
-        dto.put("level", course.getLevel());
-        dto.put("price", course.getPrice());
-        dto.put("duration", course.getDuration());
-        dto.put("startDate", course.getStartDate());
-        dto.put("endDate", course.getEndDate());
-        dto.put("publicationStatus", course.getPublicationStatus());
-        dto.put("createdAt", course.getCreatedAt());
-        dto.put("updatedAt", course.getUpdatedAt());
-        dto.put("instructorId", course.getInstructorId());
-        dto.put("enrolledCount", course.getEnrolledCount());
-        dto.put("version", course.getVersion());
-        
-        if (course.getSyllabus() != null) {
-            dto.put("syllabus", course.getSyllabus().stream()
-                    .map(this::mapModuleToDto)
-                    .collect(Collectors.toList()));
-        } else {
-            dto.put("syllabus", List.of());
+    private UUID getCurrentUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof JwtAuthenticationToken jwtAuth) {
+            return UUID.fromString(jwtAuth.getToken().getClaimAsString("sub"));
         }
-        
-        return dto;
-    }
-
-    private Map<String, Object> mapModuleToDto(com.growup.course.domain.model.CourseModule module) {
-        Map<String, Object> dto = new HashMap<>();
-        dto.put("id", module.getId());
-        dto.put("title", module.getTitle());
-        dto.put("description", module.getDescription());
-        dto.put("order", module.getOrder());
-        dto.put("version", module.getVersion());
-        
-        if (module.getTopics() != null) {
-            dto.put("topics", module.getTopics().stream()
-                    .map(this::mapTopicToDto)
-                    .collect(Collectors.toList()));
-        } else {
-            dto.put("topics", List.of());
-        }
-        
-        return dto;
-    }
-
-    private Map<String, Object> mapTopicToDto(com.growup.course.domain.model.Topic topic) {
-        Map<String, Object> dto = new HashMap<>();
-        dto.put("id", topic.getId());
-        dto.put("title", topic.getName());
-        dto.put("duration", topic.getDuration());
-        dto.put("isFree", topic.getIsFree());
-        dto.put("version", topic.getVersion());
-        return dto;
-    }
-
-    @SuppressWarnings("unchecked")
-    private com.growup.course.domain.model.Course mapDtoToCourse(Map<String, Object> dto) {
-        com.growup.course.domain.model.Course course = new com.growup.course.domain.model.Course();
-        
-        if (dto.get("id") != null) {
-            course.setId(UUID.fromString(dto.get("id").toString()));
-        }
-        course.setName((String) dto.get("name"));
-        course.setDescription((String) dto.get("description"));
-        course.setCategory((String) dto.get("category"));
-        course.setLevel((String) dto.get("level"));
-        
-        if (dto.get("price") != null) {
-            course.setPrice(Double.parseDouble(dto.get("price").toString()));
-        }
-        course.setPublicationStatus((String) dto.get("publicationStatus"));
-        
-        return course;
+        return null;
     }
 }

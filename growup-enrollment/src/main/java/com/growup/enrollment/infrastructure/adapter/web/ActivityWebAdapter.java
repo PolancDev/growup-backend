@@ -1,7 +1,7 @@
 package com.growup.enrollment.infrastructure.adapter.web;
 
-import com.growup.enrollment.application.service.ActivityService;
 import com.growup.enrollment.domain.model.Activity;
+import com.growup.enrollment.domain.port.in.ActivityInPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @Tag(name = "Activities", description = "Learning activity endpoints")
 public class ActivityWebAdapter {
 
-    private final ActivityService activityService;
+    private final ActivityInPort activityService;
 
     @GetMapping
     @Operation(summary = "Get student activities", description = "Get all activities for a student")

@@ -5,7 +5,6 @@ import com.growup.enrollment.domain.port.in.ActivityInPort;
 import com.growup.enrollment.domain.port.out.ActivityPersistencePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -13,8 +12,8 @@ import java.util.UUID;
 
 /**
  * Servicio de Aplicación para el registro de actividades.
+ * NO usa anotaciones de Spring (@Service) - se configura manualmente en AppConfig.
  */
-@Service
 @RequiredArgsConstructor
 @Slf4j
 public class ActivityService implements ActivityInPort {

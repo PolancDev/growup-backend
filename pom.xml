@@ -34,7 +34,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <lombok.version>1.18.30</lombok.version>
+        <lombok.version>1.18.46</lombok.version>
         <jjwt.version>0.11.5</jjwt.version>
         <openapi.version>7.2.0</openapi.version>
         <swagger.version>2.2.19</swagger.version>

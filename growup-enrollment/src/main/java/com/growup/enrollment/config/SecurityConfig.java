@@ -6,9 +6,14 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  * Configuración de seguridad para Enrollment Service.
@@ -54,5 +59,16 @@ public class SecurityConfig {
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
         
         return jwtAuthenticationConverter;
+    }
+
+    /**
+     * Bean JwtDecoder para validar tokens JWT.
+     * Requerido por la autoconfiguración de OAuth2 Resource Server.
+     */
+    @Bean
+    public JwtDecoder jwtDecoder(@Value("${jwt.secret:GrowUpSecretKeyForJWTTokenValidationMinimum256BitsRequired!}") String jwtSecret) {
+        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        SecretKeySpec secretKeySpec = new SecretKeySpec(keyBytes, "HmacSHA256");
+        return NimbusJwtDecoder.withSecretKey(secretKeySpec).build();
     }
 }

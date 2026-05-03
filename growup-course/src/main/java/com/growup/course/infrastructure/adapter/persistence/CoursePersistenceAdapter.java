@@ -29,6 +29,13 @@ public class CoursePersistenceAdapter implements CoursePersistencePort {
 
     @Override
     public Course save(Course course) {
+        if (course.getId() != null && courseRepository.existsById(course.getId())) {
+            var existing = courseRepository.findById(course.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Curso no encontrado con ID: " + course.getId()));
+            courseMapper.updateEntity(existing, course);
+            var savedEntity = courseRepository.save(existing);
+            return courseMapper.toDomain(savedEntity);
+        }
         var entity = courseMapper.toEntity(course);
         if (entity == null) {
             throw new ResourceNotFoundException("Curso no encontrado en BBDD");

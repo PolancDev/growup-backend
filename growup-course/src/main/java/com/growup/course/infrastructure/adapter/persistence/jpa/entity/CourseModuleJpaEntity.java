@@ -39,8 +39,9 @@ public class CourseModuleJpaEntity {
     @Column(name = "module_order")
     private Integer order;
 
-    @Column(name = "course_id", nullable = false)
-    private UUID courseId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id", nullable = false)
+    private CourseJpaEntity course;
 
     @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

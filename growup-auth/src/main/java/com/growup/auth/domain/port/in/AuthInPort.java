@@ -2,6 +2,9 @@ package com.growup.auth.domain.port.in;
 
 import com.growup.auth.domain.model.User;
 
+import java.util.Optional;
+import java.util.UUID;
+
 /**
  * Puerto de Entrada para los casos de uso de Autenticación.
  */
@@ -31,4 +34,10 @@ public interface AuthInPort {
      * Genera un token de acceso para el usuario.
      */
     String generateToken(User user);
+
+    /**
+     * Obtiene un usuario por su ID.
+     * Usado para obtener información del usuario desde el token JWT.
+     */
+    Optional<User> getUserById(UUID id);
 }

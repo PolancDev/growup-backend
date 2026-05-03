@@ -12,15 +12,15 @@ spring:
   
   # Zipkin Configuration
   zipkin:
-    base-url: ${ZIPKIN_BASE_URL:http://localhost:9411}
+    base-url: ${ZIPKIN_BASE_URL:http://zipkin:9411}
     discovery-client-enabled: true
     sender:
       type: web
-  
+   
   datasource:
-    url: jdbc:postgresql://localhost:5433/growup_enrollment?currentSchema=public
-    username: postgres
-    password: admin
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/growup_enrollment?currentSchema=public}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   
   jpa:
@@ -36,35 +36,35 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-# Auth and Course Service URLs
+  # Auth and Course Service URLs
 auth:
   service:
-    url: http://localhost:8081
+    url: ${AUTH_SERVICE_URL:http://auth:8081}
 course:
   service:
-    url: http://localhost:8082
+    url: ${COURSE_SERVICE_URL:http://course:8082}
 
-# Eureka Client Configuration
-eureka:
+  # Eureka Client Configuration
+  eureka:
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${server.port}
   client:
     service-url:
-      default-zone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://discovery:8761/eureka/}
     registry-fetch-interval-seconds: 10
 
-# OAuth2 Resource Server (Keycloak) Configuration
+  # OAuth2 Resource Server (Keycloak) Configuration
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/growup}
-          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/growup/protocol/openid-connect/certs}
-
-# Keycloak Configuration
-keycloak:
-  issuer: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/growup}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak:8180/realms/growup}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://keycloak:8180/realms/growup/protocol/openid-connect/certs}
+ 
+  # Keycloak Configuration
+  keycloak:
+    issuer: ${KEYCLOAK_ISSUER_URI:http://keycloak:8180/realms/growup}
 
 # OpenAPI / Swagger
 springdoc:

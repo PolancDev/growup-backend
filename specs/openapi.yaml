@@ -1,0 +1,1300 @@
+openapi: 3.0.0
+info:
+  title: API de GrowUp
+  description: Especificación de la API para la plataforma de e-learning GrowUp.
+  version: 1.1.0
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Servidor de Desarrollo Local
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- Enumeraciones ---
+    Role:
+      type: string
+      enum: [ADMIN, TEACHER, STUDENT]
+      description: Roles de usuario en el sistema
+
+    AuthStatus:
+      type: string
+      enum: [checking, authenticated, notAuthenticated]
+      description: Estado de autenticación del usuario
+
+    CourseStatus:
+      type: string
+      enum: [Publicado, Borrador, En Revision]
+      description: Estado de publicación del curso
+
+    CourseLevel:
+      type: string
+      enum: [Principiante, Intermedio, Avanzado]
+      description: Nivel de dificultad del curso
+
+    EnrollmentStatus:
+      type: string
+      enum: [active, completed, archived, not_started]
+      description: Estado de inscripción del estudiante en un curso
+
+    NotificationType:
+      type: string
+      enum: [info, success, warning, error]
+      description: Tipo de notificación
+
+    ActivityType:
+      type: string
+      enum: [enrollment, question, review]
+      description: Tipo de actividad en el sistema
+
+    # --- Modelos Principales ---
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - isActive
+        - role
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único del usuario
+        name:
+          type: string
+          description: Nombre completo del usuario
+        email:
+          type: string
+          format: email
+          description: Correo electrónico del usuario
+        isActive:
+          type: boolean
+          description: Indica si el usuario está activo (Baja lógica si es false)
+        role:
+          $ref: "#/components/schemas/Role"
+        avatar:
+          type: string
+          format: uri
+          description: URL del avatar del usuario
+        joinDate:
+          type: string
+          format: date-time
+          description: Fecha de registro del usuario
+        bio:
+          type: string
+          description: Biografía del usuario (opcional)
+        version:
+          type: integer
+          format: int64
+          description: Versión de control de concurrencia
+
+    Topic:
+      type: object
+      required:
+        - title
+        - duration
+      properties:
+        title:
+          type: string
+          description: Título del tema
+        duration:
+          type: integer
+          description: Duración en minutos
+
+    Syllabus:
+      type: object
+      required:
+        - title
+        - description
+        - topics
+        - order
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único del módulo
+        title:
+          type: string
+          description: Título del módulo
+        description:
+          type: string
+          description: Descripción del módulo
+        order:
+          type: integer
+          description: Orden del módulo en el syllabus
+        topics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Topic"
+          description: Lista de temas del módulo
+
+    Instructor:
+      type: object
+      required:
+        - id
+        - name
+        - role
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único del instructor
+        name:
+          type: string
+          description: Nombre completo del instructor
+        role:
+          type: string
+          description: Rol o título del instructor
+        avatarUrl:
+          type: string
+          format: uri
+          description: URL del avatar del instructor
+        bio:
+          type: string
+          description: Biografía del instructor
+
+    Course:
+      type: object
+      required:
+        - name
+        - category
+        - price
+        - publicationStatus
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único del curso
+        name:
+          type: string
+          description: Nombre del curso
+        description:
+          type: string
+          description: Descripción del curso
+        imageUrl:
+          type: string
+          format: uri
+          description: URL de la imagen del curso
+        category:
+          type: string
+          description: Categoría del curso (ej. DISEÑO WEB, DESARROLLO, ARQUITECTURA, MARKETING)
+        level:
+          $ref: "#/components/schemas/CourseLevel"
+        price:
+          type: number
+          format: double
+          description: Precio del curso
+        duration:
+          type: number
+          description: Duración total en horas
+        startDate:
+          type: string
+          format: date-time
+          description: Fecha de inicio del curso
+        endDate:
+          type: string
+          format: date-time
+          description: Fecha de finalización del curso
+        publicationStatus:
+          $ref: "#/components/schemas/CourseStatus"
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creación del curso
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de última actualización
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de eliminación (soft delete)
+        instructorId:
+          type: string
+          format: uuid
+          description: ID del instructor (para desacoplamiento de bounded contexts)
+        instructor:
+          $ref: "#/components/schemas/Instructor"
+        syllabus:
+          type: array
+          items:
+            $ref: "#/components/schemas/Syllabus"
+          description: Temario del curso
+        enrolledCount:
+          type: integer
+          description: Número de estudiantes inscritos
+        version:
+          type: integer
+          format: int64
+          description: Versión de control de concurrencia
+
+    # --- Modelos del Estudiante ---
+    EnrolledCourse:
+      allOf:
+        - $ref: "#/components/schemas/Course"
+        - type: object
+          properties:
+            progress:
+              type: integer
+              minimum: 0
+              maximum: 100
+              description: Porcentaje de progreso del estudiante
+            lastAccessDate:
+              type: string
+              format: date-time
+              description: Fecha del último acceso al curso
+            enrollmentStatus:
+              $ref: "#/components/schemas/EnrollmentStatus"
+            nextLessonId:
+              type: string
+              format: uuid
+              description: ID de la siguiente lección
+            version:
+              type: integer
+              format: int64
+              description: Versión de control de concurrencia
+
+    StudentStats:
+      type: object
+      properties:
+        activeCoursesCount:
+          type: integer
+          description: Número de cursos activos
+        completedCoursesCount:
+          type: integer
+          description: Número de cursos completados
+        certificatesEarned:
+          type: integer
+          description: Número de certificados obtenidos
+        totalHoursLearning:
+          type: number
+          description: Total de horas de aprendizaje
+        averageScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Puntuación promedio
+        learningStreakDays:
+          type: integer
+          description: Días consecutivos de aprendizaje
+
+    Notification:
+      type: object
+      required:
+        - id
+        - userId
+        - title
+        - message
+        - date
+        - read
+        - type
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único de la notificación
+        userId:
+          type: string
+          format: uuid
+          description: ID del usuario destinatario
+        title:
+          type: string
+          description: Título de la notificación
+        message:
+          type: string
+          description: Mensaje de la notificación
+        date:
+          type: string
+          format: date-time
+          description: Fecha de la notificación
+        read:
+          type: boolean
+          description: Indica si la notificación ha sido leída
+        type:
+          $ref: "#/components/schemas/NotificationType"
+        link:
+          type: string
+          format: uri
+          description: Enlace opcional a un recurso relacionado
+
+    # --- Modelos del Profesor ---
+    CourseItem:
+      allOf:
+        - $ref: "#/components/schemas/Course"
+        - type: object
+          properties:
+            students:
+              type: integer
+              description: Número de estudiantes inscritos
+            rating:
+              type: number
+              minimum: 0
+              maximum: 5
+              description: Calificación promedio del curso
+
+    DashboardStats:
+      type: object
+      properties:
+        totalStudents:
+          type: integer
+          description: Total de estudiantes
+        activeCourses:
+          type: integer
+          description: Cursos activos
+        averageRating:
+          type: number
+          description: Calificación promedio
+        monthlyRevenue:
+          type: number
+          description: Ingresos mensuales
+        studentsGrowth:
+          type: number
+          description: Crecimiento de estudiantes (%)
+        revenueGrowth:
+          type: number
+          description: Crecimiento de ingresos (%)
+
+    RevenueData:
+      type: object
+      properties:
+        month:
+          type: string
+          description: Mes
+        revenue:
+          type: number
+          description: Ingresos del mes
+        enrollments:
+          type: integer
+          description: Inscripciones del mes
+
+    CoursePerformance:
+      type: object
+      properties:
+        courseId:
+          type: string
+          format: uuid
+          description: ID del curso
+        courseName:
+          type: string
+          description: Nombre del curso
+        students:
+          type: integer
+          description: Número de estudiantes
+        revenue:
+          type: number
+          description: Ingresos generados
+        rating:
+          type: number
+          description: Calificación del curso
+        status:
+          $ref: "#/components/schemas/CourseStatus"
+
+    AnalyticsSummary:
+      type: object
+      properties:
+        totalRevenue:
+          type: number
+          description: Ingresos totales
+        totalStudents:
+          type: integer
+          description: Total de estudiantes
+        averageRating:
+          type: number
+          description: Calificación promedio
+        activeCourses:
+          type: integer
+          description: Cursos activos
+
+    Activity:
+      type: object
+      required:
+        - id
+        - userId
+        - action
+        - target
+        - time
+        - type
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador de la actividad
+        userId:
+          type: string
+          format: uuid
+          description: ID del usuario que realizó la actividad
+        action:
+          type: string
+          description: Descripción de la acción
+        target:
+          type: string
+          description: Objetivo de la acción
+        time:
+          type: string
+          format: date-time
+          description: Momento de la actividad
+        type:
+          $ref: "#/components/schemas/ActivityType"
+
+    Review:
+      type: object
+      required:
+        - id
+        - courseId
+        - rating
+        - comment
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único de la reseña
+        courseId:
+          type: string
+          format: uuid
+          description: ID del curso valorado
+        courseName:
+          type: string
+          description: Nombre del curso valorado
+        studentId:
+          type: string
+          format: uuid
+          description: ID del estudiante que valora
+        studentName:
+          type: string
+          description: Nombre del estudiante que valora
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Calificación (1-5)
+        comment:
+          type: string
+          description: Comentario de la reseña
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creación
+        version:
+          type: integer
+          format: int64
+          description: Versión de control de concurrencia
+
+    # --- DTOs de Peticiones/Respuestas ---
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Correo electrónico del usuario
+        password:
+          type: string
+          format: password
+          description: Contraseña del usuario
+
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+        - role
+      properties:
+        name:
+          type: string
+          description: Nombre completo del usuario
+        email:
+          type: string
+          format: email
+          description: Correo electrónico
+        password:
+          type: string
+          format: password
+          description: Contraseña
+        role:
+          $ref: "#/components/schemas/Role"
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre completo del usuario
+        email:
+          type: string
+          format: email
+          description: Correo electrónico
+        avatar:
+          type: string
+          format: uri
+          description: URL del avatar
+        bio:
+          type: string
+          description: Biografía (opcional, para profesores)
+        password:
+          type: string
+          format: password
+          description: Nueva contraseña (opcional)
+        version:
+          type: integer
+          format: int64
+          description: Versión de control de concurrencia
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Token JWT de autenticación
+        user:
+          $ref: "#/components/schemas/User"
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          description: Código de estado HTTP
+        message:
+          type: string
+          description: Mensaje de error
+        timestamp:
+          type: string
+          format: date-time
+          description: Momento del error
+
+  # security: ELIMINADO - Se define seguridad por endpoint (ver paths)
+
+paths:
+  # ========================================
+  # Autenticación y Perfil Propio
+  # ========================================
+  /auth/login:
+    post:
+      summary: Iniciar sesión
+      description: Autenticar usuario con email y contraseña
+      tags: [Autenticación]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Inicio de sesión exitoso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/register:
+    post:
+      summary: Registrar nuevo usuario
+      description: Crear una nueva cuenta de usuario
+      tags: [Autenticación]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Datos inválidos o email ya registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      summary: Obtener usuario actual
+      description: Obtener información del usuario autenticado
+      tags: [Autenticación]
+      responses:
+        "200":
+          description: Información del usuario actual
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Actualizar perfil propio
+      description: Actualizar nombre, bio, avatar o contraseña del usuario autenticado
+      tags: [Autenticación]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Perfil actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ========================================
+  # Gestión de Usuarios (Admin)
+  # ========================================
+  /admin/users:
+    get:
+      summary: Listar todos los usuarios
+      description: Obtener lista paginada de usuarios (Solo ADMIN)
+      tags: [Admin]
+      parameters:
+        - in: query
+          name: role
+          required: false
+          schema:
+            $ref: "#/components/schemas/Role"
+          description: Filtrar por rol
+        - in: query
+          name: isActive
+          required: false
+          schema:
+            type: boolean
+          description: Filtrar por estado (activo/inactivo)
+      responses:
+        "200":
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "403":
+          description: No autorizado (requiere rol ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users/{id}:
+    get:
+      summary: Obtener detalles de usuario (Admin)
+      description: Obtener información completa de cualquier usuario por ID
+      tags: [Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario
+      responses:
+        "200":
+          description: Detalles del usuario
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    put:
+      summary: Modificar usuario (Admin)
+      description: Modificar datos de cualquier usuario (incluyendo rol)
+      tags: [Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+      responses:
+        "200":
+          description: Usuario modificado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /admin/users/{id}/status:
+    patch:
+      summary: Cambiar estado de usuario (Alta/Baja Lógica)
+      description: Activar o desactivar un usuario sin eliminarlo de la base de datos
+      tags: [Admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isActive:
+                  type: boolean
+                  description: Nuevo estado (true = activo, false = inactivo/baja lógica)
+      responses:
+        "200":
+          description: Estado del usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ========================================
+  # Gestión de Cursos
+  # ========================================
+  /courses:
+    get:
+      summary: Listar cursos
+      description: Obtener lista de cursos con filtros opcionales
+      tags: [Cursos]
+      parameters:
+        - in: query
+          name: category
+          required: false
+          schema:
+            type: string
+          description: Filtrar por categoría
+        - in: query
+          name: level
+          required: false
+          schema:
+            $ref: "#/components/schemas/CourseLevel"
+          description: Filtrar por nivel
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: "#/components/schemas/CourseStatus"
+          description: Filtrar por estado de publicación
+      responses:
+        "200":
+          description: Lista de cursos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Course"
+
+    post:
+      summary: Crear curso
+      description: Crear un nuevo curso (requiere rol TEACHER o ADMIN)
+      tags: [Cursos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Course"
+      responses:
+        "201":
+          description: Curso creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+        "403":
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses/{id}:
+    get:
+      summary: Obtener detalles del curso
+      description: Obtener información completa de un curso
+      tags: [Cursos]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del curso
+      responses:
+        "200":
+          description: Detalles del curso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+        "404":
+          description: Curso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      summary: Actualizar curso
+      description: Actualizar información de un curso
+      tags: [Cursos]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del curso
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Course"
+      responses:
+        "200":
+          description: Curso actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+        "404":
+          description: Curso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      summary: Eliminar curso
+      description: Eliminar un curso (soft delete)
+      tags: [Cursos]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del curso
+      responses:
+        "204":
+          description: Curso eliminado exitosamente
+        "404":
+          description: Curso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses/{id}/syllabus:
+    get:
+      summary: Obtener temario del curso
+      description: Obtener el temario completo del curso
+      tags: [Cursos]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del curso
+      responses:
+        "200":
+          description: Temario del curso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Syllabus"
+        "404":
+          description: Curso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /student/catalog:
+    get:
+      summary: Catálogo de cursos para estudiantes
+      description: Obtener el catálogo completo de cursos disponibles en la plataforma para el estudiante autenticado. Admite filtros opcionales por categoría, nivel y estado de publicación.
+      tags: [Estudiante]
+      parameters:
+        - in: query
+          name: category
+          required: false
+          schema:
+            type: string
+          description: Filtrar por categoría
+        - in: query
+          name: level
+          required: false
+          schema:
+            $ref: "#/components/schemas/CourseLevel"
+          description: Filtrar por nivel
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: "#/components/schemas/CourseStatus"
+          description: Filtrar por estado de publicación
+      responses:
+        "200":
+          description: Lista de cursos disponibles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Course"
+        "401":
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses/{id}/enroll:
+    post:
+      summary: Inscribirse en un curso
+      description: Inscribir al estudiante autenticado en un curso
+      tags: [Estudiante]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del curso
+      responses:
+        "200":
+          description: Inscripción exitosa
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnrolledCourse"
+        "404":
+          description: Curso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Ya inscrito en el curso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses/{id}/enrolled:
+    get:
+      summary: Verificar inscripción en un curso
+      description: Verifica si el estudiante autenticado está inscrito en un curso
+      tags: [Estudiante]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del curso
+      responses:
+        "200":
+          description: Estado de inscripción
+          content:
+            application/json:
+              schema:
+                type: boolean
+                description: "true si está inscrito, false si no"
+        "404":
+          description: Curso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /courses/{id}/reviews:
+    post:
+      summary: Valorar un curso
+      description: Crear una nueva reseña para un curso en el que el estudiante está inscrito
+      tags: [Estudiante]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del curso a valorar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Review"
+      responses:
+        "201":
+          description: Reseña creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+        "400":
+          description: Datos inválidos o estudiante no inscrito
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Curso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /student/enrollments:
+    get:
+      summary: Obtener mis inscripciones
+      description: Obtener lista de cursos en los que está inscrito el estudiante
+      tags: [Estudiante]
+      responses:
+        "200":
+          description: Lista de cursos inscritos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EnrolledCourse"
+
+  /student/stats:
+    get:
+      summary: Obtener estadísticas del estudiante
+      description: Obtener estadísticas de aprendizaje del estudiante autenticado
+      tags: [Estudiante]
+      responses:
+        "200":
+          description: Estadísticas del estudiante
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentStats"
+
+  /student/notifications:
+    get:
+      summary: Obtener notificaciones
+      description: Obtener lista de notificaciones del estudiante
+      tags: [Estudiante]
+      parameters:
+        - in: query
+          name: unreadOnly
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Mostrar solo notificaciones no leídas
+      responses:
+        "200":
+          description: Lista de notificaciones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /student/notifications/{id}/read:
+    put:
+      summary: Marcar notificación como leída
+      description: Marcar una notificación específica como leída
+      tags: [Estudiante]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID de la notificación
+      responses:
+        "200":
+          description: Notificación marcada como leída
+        "404":
+          description: Notificación no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ========================================
+  # Operaciones de Profesor
+  # ========================================
+  /teacher/courses:
+    get:
+      summary: Obtener mis cursos
+      description: Obtener lista de cursos del profesor autenticado con estadísticas
+      tags: [Profesor]
+      responses:
+        "200":
+          description: Lista de cursos del profesor
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CourseItem"
+
+  /teacher/dashboard/stats:
+    get:
+      summary: Obtener estadísticas del panel
+      description: Obtener resumen de estadísticas para el panel del profesor
+      tags: [Profesor]
+      responses:
+        "200":
+          description: Estadísticas del panel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /teacher/analytics/revenue:
+    get:
+      summary: Obtener análisis de ingresos
+      description: Obtener datos de ingresos mensuales del profesor
+      tags: [Profesor]
+      parameters:
+        - in: query
+          name: months
+          required: false
+          schema:
+            type: integer
+            default: 12
+          description: Número de meses a consultar
+      responses:
+        "200":
+          description: Datos de ingresos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RevenueData"
+
+  /teacher/analytics/courses:
+    get:
+      summary: Obtener rendimiento de cursos
+      description: Obtener análisis de rendimiento de los cursos del profesor
+      tags: [Profesor]
+      responses:
+        "200":
+          description: Rendimiento de cursos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoursePerformance"
+
+  /teacher/analytics/summary:
+    get:
+      summary: Obtener resumen de analíticas
+      description: Obtener resumen global de analíticas del profesor
+      tags: [Profesor]
+      responses:
+        "200":
+          description: Resumen de analíticas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsSummary"
+
+  /teacher/activities:
+    get:
+      summary: Obtener actividades recientes
+      description: Obtener lista de actividades recientes en los cursos del profesor
+      tags: [Profesor]
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Número máximo de actividades a retornar
+      responses:
+        "200":
+          description: Actividades recientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
+
+  /teacher/reviews:
+    get:
+      summary: Obtener reseñas de mis cursos
+      description: Obtener lista de todas las reseñas dejadas en los cursos del profesor
+      tags: [Profesor]
+      responses:
+        "200":
+          description: Lista de reseñas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"

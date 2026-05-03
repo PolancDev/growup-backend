@@ -15,9 +15,9 @@ public interface CourseInPort {
 
     Course createCourse(Course course, UUID instructorId);
 
-    Course updateCourse(UUID id, Course course);
+    Course updateCourse(UUID id, Course course, UUID currentUserId);
 
-    void deleteCourse(UUID id);
+    void deleteCourse(UUID id, UUID currentUserId);
 
     List<Course> getCoursesByInstructor(UUID instructorId);
 }

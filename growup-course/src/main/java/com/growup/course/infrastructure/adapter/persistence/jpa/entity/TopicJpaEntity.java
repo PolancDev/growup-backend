@@ -38,6 +38,10 @@ public class TopicJpaEntity {
     @JoinColumn(name = "module_id")
     private CourseModuleJpaEntity module;
 
+    @Builder.Default
+    @Column(name = "is_free")
+    private Boolean isFree = false;
+
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
 

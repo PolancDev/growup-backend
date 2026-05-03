@@ -1,26 +1,28 @@
 server:
   port: 8081
 
+jwt:
+  secret: ${JWT_SECRET:GrowUpJWTSecret2026!@#$%^&*()_+SecureKey32Min} # ⚠️ CAMBIAR EN PRODUCCIÓN: usar variable de entorno JWT_SECRET (mínimo 32 chars para HS256)
+  expiration: 86400000 # 24 horas en milisegundos
+  
 spring:
   application:
     name: growup-auth
   
-  # Micrometer Tracing Configuration
   autoconfigure:
     exclude:
       - org.springframework.cloud.sleuth.annotation.SleuthAnnotationAutoConfiguration
   
-  # Zipkin Configuration
   zipkin:
-    base-url: ${ZIPKIN_BASE_URL:http://localhost:9411}
+    base-url: ${ZIPKIN_BASE_URL:http://zipkin:9411}
     discovery-client-enabled: true
     sender:
       type: web
-  
+    
   datasource:
-    url: jdbc:postgresql://localhost:5433/growup_auth
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:admin}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/growup_auth}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   
   jpa:
@@ -36,29 +38,15 @@ spring:
     locations: classpath:db/migration/auth
     baseline-on-migrate: true
 
-# Eureka Client Configuration
-eureka:
-  instance:
-    prefer-ip-address: true
-    instance-id: ${spring.application.name}:${server.port}
-  client:
-    service-url:
-      default-zone: http://localhost:8761/eureka/
-    registry-fetch-interval-seconds: 10
+  eureka:
+    instance:
+      prefer-ip-address: true
+      instance-id: ${spring.application.name}:${server.port}
+    client:
+      service-url:
+        defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+      registry-fetch-interval-seconds: 10
 
-# OAuth2 Resource Server (Keycloak) Configuration
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/growup}
-          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/growup/protocol/openid-connect/certs}
-
-# Keycloak Configuration
-keycloak:
-  issuer: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/growup}
-
-# Actuator endpoints for health monitoring
 management:
   endpoints:
     web:

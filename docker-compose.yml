@@ -1,0 +1,193 @@
+services:
+  # ============================================
+  # INFRASTRUCTURE SERVICES
+  # ============================================
+  
+  # PostgreSQL for Auth Service
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: growup-postgres-auth
+    environment:
+      POSTGRES_DB: growup_auth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"  # Host port for local access if needed
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+    networks:
+      - growup-network
+
+  # PostgreSQL for Course Service
+  postgres-course:
+    image: postgres:15-alpine
+    container_name: growup-postgres-course
+    environment:
+      POSTGRES_DB: growup_course
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432" # Mapped to 5433 on host to avoid conflicts
+    volumes:
+      - postgres_course_data:/var/lib/postgresql/data
+    networks:
+      - growup-network
+
+  # PostgreSQL for Enrollment Service
+  postgres-enrollment:
+    image: postgres:15-alpine
+    container_name: growup-postgres-enrollment
+    environment:
+      POSTGRES_DB: growup_enrollment
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432" # Mapped to 5434 on host
+    volumes:
+      - postgres_enrollment_data:/var/lib/postgresql/data
+    networks:
+      - growup-network
+
+  # PostgreSQL for Notification Service
+  postgres-notification:
+    image: postgres:15-alpine
+    container_name: growup-postgres-notification
+    environment:
+      POSTGRES_DB: growup_notification
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432" # Mapped to 5435 on host
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    networks:
+      - growup-network
+
+  # ============================================
+  # DISCOVERY SERVER (EUREKA)
+  # ============================================
+  discovery:
+    build:
+      context: ./growup-discovery
+      dockerfile: Dockerfile
+    container_name: growup-discovery
+    ports:
+      - "8761:8761"
+    environment:
+      JAVA_OPTS: "-Xmx256m -Xms128m -XX:+UseG1GC"
+    networks:
+      - growup-network
+
+  # ============================================
+  # MICROSERVICES
+  # ============================================
+  
+  # Auth Service
+  auth:
+    build:
+      context: ./growup-auth
+      dockerfile: Dockerfile
+    container_name: growup-auth
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/growup_auth
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: GrowUpSecretKeyForJWTTokenValidationMinimum256BitsRequired!
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka/
+    depends_on:
+      - postgres-auth
+      - discovery
+    networks:
+      - growup-network
+
+  # Course Service
+  course:
+    build:
+      context: ./growup-course
+      dockerfile: Dockerfile
+    container_name: growup-course
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-course:5432/growup_course
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka/
+    depends_on:
+      - postgres-course
+      - discovery
+    networks:
+      - growup-network
+
+  # Enrollment Service
+  enrollment:
+    build:
+      context: ./growup-enrollment
+      dockerfile: Dockerfile
+    container_name: growup-enrollment
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-enrollment:5432/growup_enrollment
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka/
+    depends_on:
+      - postgres-enrollment
+      - discovery
+    networks:
+      - growup-network
+
+  # Notification Service
+  notification:
+    build:
+      context: ./growup-notification
+      dockerfile: Dockerfile
+    container_name: growup-notification
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-notification:5432/growup_notification
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka/
+    depends_on:
+      - postgres-notification
+      - discovery
+    networks:
+      - growup-network
+
+  # ============================================
+  # API GATEWAY
+  # ============================================
+  gateway:
+    build:
+      context: ./growup-gateway
+      dockerfile: Dockerfile
+    container_name: growup-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC -XX:+UseStringDeduplication"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka/
+      SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED: "true"
+    depends_on:
+      - discovery
+    networks:
+      - growup-network
+
+networks:
+  growup-network:
+    driver: bridge
+
+volumes:
+  postgres_auth_data:
+  postgres_course_data:
+  postgres_enrollment_data:
+  postgres_notification_data:

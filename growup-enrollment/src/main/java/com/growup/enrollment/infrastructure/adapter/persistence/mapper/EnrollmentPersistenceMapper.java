@@ -22,7 +22,7 @@ public class EnrollmentPersistenceMapper {
         enrollment.setCourseId(entity.getCourseId());
         enrollment.setProgress(entity.getProgress());
         enrollment.setLastAccessDate(entity.getLastAccessDate());
-        enrollment.setEnrollmentStatus(mapStatus(entity.getEnrollmentStatus()));
+        enrollment.setEnrollmentStatus(entity.getEnrollmentStatus()); // Direct enum assignment
         enrollment.setNextLessonId(entity.getNextLessonId());
         enrollment.setCreatedAt(entity.getCreatedAt());
         enrollment.setVersion(entity.getVersion());
@@ -39,24 +39,10 @@ public class EnrollmentPersistenceMapper {
         entity.setCourseId(enrollment.getCourseId());
         entity.setProgress(enrollment.getProgress());
         entity.setLastAccessDate(enrollment.getLastAccessDate());
-        entity.setEnrollmentStatus(mapStatus(enrollment.getEnrollmentStatus()));
+        entity.setEnrollmentStatus(enrollment.getEnrollmentStatus()); // Direct enum assignment
         entity.setNextLessonId(enrollment.getNextLessonId());
         entity.setCreatedAt(enrollment.getCreatedAt());
         entity.setVersion(enrollment.getVersion() != null ? enrollment.getVersion() : 0L);
         return entity;
-    }
-
-    private String mapStatus(EnrollmentStatus status) {
-        return status != null ? status.getValue() : null;
-    }
-
-    private EnrollmentStatus mapStatus(String status) {
-        if (status == null)
-            return null;
-        try {
-            return EnrollmentStatus.fromValue(status);
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
     }
 }

@@ -1,0 +1,14 @@
+{
+  "decision_java_version": {
+    "description": "Payload para registrar decisión de cambio de Java 26 a Java 17"
+  },
+  "solution_local_demo": {
+    "description": "Payload para registrar solución de configuración para demo local"
+  },
+  "status_demo": {
+    "description": "Payload para registrar estado de la demo"
+  },
+  "commands_setup": {
+    "description": "Payload para registrar comandos clave de configuración"
+  }
+}

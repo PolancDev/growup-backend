@@ -1,11 +1,11 @@
 package com.growup.auth.application.service;
 
 import com.growup.auth.domain.model.User;
+import com.growup.auth.domain.port.in.UserInPort;
 import com.growup.auth.domain.port.out.UserPersistencePort;
 import com.growup.common.infrastructure.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
@@ -13,11 +13,11 @@ import java.util.UUID;
 /**
  * Servicio de Aplicación para Usuarios.
  * Implementa el Puerto de Entrada y se comunica con el Puerto de Salida.
+ * Sigue estrictamente la Arquitectura Hexagonal.
  */
-@Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserService {
+public class UserService implements UserInPort {
 
     private final UserPersistencePort userPersistencePort;
 

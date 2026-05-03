@@ -1,6 +1,6 @@
 package com.growup.enrollment.infrastructure.adapter.web;
 
-import com.growup.enrollment.application.service.DashboardService;
+import com.growup.enrollment.domain.port.in.DashboardInPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,7 +24,7 @@ import java.util.UUID;
 @Tag(name = "Dashboard", description = "Dashboard and statistics endpoints")
 public class DashboardWebAdapter {
 
-    private final DashboardService dashboardService;
+    private final DashboardInPort dashboardService;
 
     @GetMapping("/teachers/{teacherId}/dashboard")
     @Operation(summary = "Get teacher dashboard", description = "Get dashboard stats for a teacher")

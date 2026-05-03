@@ -1,6 +1,7 @@
 package com.growup.enrollment.infrastructure.adapter.web;
 
-import com.growup.enrollment.application.service.EnrollmentService;
+import com.growup.enrollment.domain.model.Enrollment;
+import com.growup.enrollment.domain.port.in.EnrollmentInPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,10 +29,10 @@ import java.util.stream.Collectors;
 @Tag(name = "Enrollments", description = "Enrollment management endpoints")
 public class EnrollmentWebAdapter {
 
-    private final EnrollmentService enrollmentService;
+    private final EnrollmentInPort enrollmentService;
 
     @GetMapping("/enrollments")
-    @Operation(summary = "Get student enrollments", description = "Get all enrollments for current student")
+    @Operation(summary = "Obtener inscripciones del estudiante", description = "Obtiene todas las inscripciones del estudiante actual")
     public ResponseEntity<List<Map<String, Object>>> getStudentEnrollments(
             @Parameter(description = "Student UUID") @RequestParam UUID studentId) {
         log.info("GrowUp-Log: Get enrollments for student: {}", studentId);
@@ -44,7 +45,7 @@ public class EnrollmentWebAdapter {
 
     @PostMapping("/enrollments")
     @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
-    @Operation(summary = "Enroll in a course", description = "Create a new enrollment")
+    @Operation(summary = "Inscribirse en un curso", description = "Crea una nueva inscripción")
     public ResponseEntity<Map<String, Object>> enrollCourse(@RequestBody Map<String, Object> enrollmentData) {
         log.info("GrowUp-Log: Creating enrollment: {}", enrollmentData);
         
@@ -56,7 +57,7 @@ public class EnrollmentWebAdapter {
     }
 
     @GetMapping("/enrollments/{id}")
-    @Operation(summary = "Check enrollment", description = "Check if student is enrolled")
+    @Operation(summary = "Verificar inscripción", description = "Verifica si el estudiante está inscrito")
     public ResponseEntity<Map<String, Object>> checkEnrollment(
             @PathVariable UUID id,
             @RequestParam UUID studentId,
@@ -77,7 +78,8 @@ public class EnrollmentWebAdapter {
         dto.put("studentId", enrollment.getStudentId());
         dto.put("courseId", enrollment.getCourseId());
         dto.put("progress", enrollment.getProgress());
-        dto.put("enrollmentStatus", enrollment.getEnrollmentStatus());
+        dto.put("enrollmentStatus", enrollment.getEnrollmentStatus() != null ? 
+                enrollment.getEnrollmentStatus().getValue() : null);
         dto.put("lastAccessDate", enrollment.getLastAccessDate());
         dto.put("nextLessonId", enrollment.getNextLessonId());
         return dto;

@@ -1,15 +1,14 @@
 package com.growup.auth.application.service;
 
+import com.growup.auth.domain.exception.InvalidCredentialsException;
 import com.growup.auth.domain.model.User;
+import com.growup.auth.domain.port.in.AuthInPort;
 import com.growup.auth.domain.port.out.TokenGeneratorPort;
 import com.growup.auth.domain.port.out.UserPersistencePort;
 import com.growup.common.infrastructure.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -17,25 +16,44 @@ import java.util.UUID;
 
 /**
  * Servicio de Aplicación para Autenticación.
+ * Sigue estrictamente la Arquitectura Hexagonal.
+ * Esta clase implementa el puerto de entrada AuthInPort.
  */
-@Service
 @RequiredArgsConstructor
 @Slf4j
-public class AuthService {
+public class AuthService implements AuthInPort {
 
     private final UserPersistencePort userPersistencePort;
     private final TokenGeneratorPort tokenGeneratorPort;
     private final PasswordEncoder passwordEncoder;
-    private final AuthenticationManager authenticationManager;
 
-    public User login(String email, String password) {
+    public User login(String email, String rawPassword) {
         log.info("GrowUp-Log: AuthService - Intentando login para usuario: {}", email);
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, password));
+        // 1. Buscar usuario por email (Puerto de salida)
+        log.debug("GrowUp-Log: AuthService - Buscando usuario por email: {}", email);
+        Optional<User> userOpt = userPersistencePort.findByEmail(email);
+        
+        if (userOpt.isEmpty()) {
+            log.warn("GrowUp-Log: AuthService - Usuario no encontrado: {}", email);
+            throw new InvalidCredentialsException("Credenciales inválidas");
+        }
+        
+        User user = userOpt.get();
+        log.debug("GrowUp-Log: AuthService - Usuario encontrado: {}, rol: {}, activo: {}", 
+                user.getEmail(), user.getRole(), user.getIsActive());
 
-        return userPersistencePort.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado tras autenticación exitosa"));
+        // 2. Verificar contraseña usando PasswordEncoder únicamente
+        log.debug("GrowUp-Log: AuthService - Verificando contraseña para: {}", email);
+        log.debug("GrowUp-Log: AuthService - Password hash almacenado: {}", user.getPassword());
+        
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+            log.warn("GrowUp-Log: AuthService - Contraseña incorrecta para usuario: {}", email);
+            throw new InvalidCredentialsException("Credenciales inválidas");
+        }
+
+        log.info("GrowUp-Log: AuthService - Login exitoso para usuario: {}", email);
+        return user;
     }
 
     public User register(User user, String password) {

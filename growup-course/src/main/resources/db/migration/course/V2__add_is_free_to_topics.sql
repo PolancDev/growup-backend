@@ -1,0 +1,1 @@
+ALTER TABLE module_topics ADD COLUMN is_free BOOLEAN DEFAULT FALSE;

@@ -40,7 +40,8 @@ public class UserPersistenceAdapter implements UserPersistencePort {
 
     @Override
     public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email).map(userMapper::toDomain);
+        // Usar búsqueda case-insensitive para evitar problemas de login
+        return userRepository.findByEmailIgnoreCase(email).map(userMapper::toDomain);
     }
 
     @Override

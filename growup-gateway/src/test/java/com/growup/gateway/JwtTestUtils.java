@@ -3,7 +3,7 @@ package com.growup.gateway;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.test.context.TestPropertySource;
+//import org.springframework.test.context.TestPropertySource;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;

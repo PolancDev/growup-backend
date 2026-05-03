@@ -1,5 +1,6 @@
 package com.growup.auth.infrastructure.exception;
 
+import com.growup.auth.domain.exception.InvalidCredentialsException;
 import com.growup.common.infrastructure.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -33,6 +34,12 @@ public class GlobalExceptionHandler {
     
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Map<String, Object>> handleBadCredentials(BadCredentialsException ex) {
+        log.warn("GrowUp-Log: GlobalExceptionHandler - Credenciales inválidas: {}", ex.getMessage());
+        return buildResponse(HttpStatus.UNAUTHORIZED, "Email o contraseña incorrectos");
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidCredentials(InvalidCredentialsException ex) {
         log.warn("GrowUp-Log: GlobalExceptionHandler - Credenciales inválidas: {}", ex.getMessage());
         return buildResponse(HttpStatus.UNAUTHORIZED, "Email o contraseña incorrectos");
     }

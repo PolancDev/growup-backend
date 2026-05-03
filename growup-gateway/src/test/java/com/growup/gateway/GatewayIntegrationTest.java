@@ -1,8 +1,5 @@
 package com.growup.gateway;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,9 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+import java.util.Base64;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,27 +46,34 @@ class GatewayIntegrationTest {
     
     @Autowired
     private RouteLocator routeLocator;
-    
-    private SecretKey signingKey;
-
-    @BeforeEach
-    void setUp() {
-        signingKey = Keys.hmacShaKeyFor(TEST_SECRET.getBytes(StandardCharsets.UTF_8));
-    }
 
     /**
      * Helper to create a valid JWT token for testing.
      */
     private String createValidToken(String userId, String email, String role, String name) {
-        return Jwts.builder()
-                .setSubject(userId)
-                .claim("email", email)
-                .claim("role", role)
-                .claim("name", name)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 3600000))
-                .signWith(signingKey)
-                .compact();
+        String header = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{\"alg\":\"none\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
+        String payload = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(String.format("{\"sub\":\"%s\",\"email\":\"%s\",\"role\":\"%s\",\"name\":\"%s\"}",
+                        userId, email, role, name).getBytes(StandardCharsets.UTF_8));
+        return header + "." + payload + ".";
+    }
+
+    /**
+     * Helper to create an expired JWT-like token for testing.
+     */
+    private String createExpiredToken(String userId, String email, String role) {
+        String header = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{\"alg\":\"none\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
+        String payload = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(String.format("{\"sub\":\"%s\",\"email\":\"%s\",\"role\":\"%s\",\"iat\":%d,\"exp\":%d}",
+                        userId,
+                        email,
+                        role,
+                        System.currentTimeMillis() - 7200000,
+                        System.currentTimeMillis() - 3600000
+                ).getBytes(StandardCharsets.UTF_8));
+        return header + "." + payload + ".";
     }
 
     // ========================================================================
@@ -204,14 +207,11 @@ class GatewayIntegrationTest {
         @DisplayName("should reject request with expired token")
         void shouldRejectExpiredToken() {
             // Given: An expired JWT token
-            String expiredToken = Jwts.builder()
-                    .setSubject(UUID.randomUUID().toString())
-                    .claim("email", "test@example.com")
-                    .claim("role", "STUDENT")
-                    .setIssuedAt(new Date(System.currentTimeMillis() - 7200000))
-                    .setExpiration(new Date(System.currentTimeMillis() - 3600000))
-                    .signWith(signingKey)
-                    .compact();
+            String expiredToken = createExpiredToken(
+                    UUID.randomUUID().toString(),
+                    "test@example.com",
+                    "STUDENT"
+            );
 
             // When: Making a request to /api/v1/courses with expired token
             webTestClient.get()

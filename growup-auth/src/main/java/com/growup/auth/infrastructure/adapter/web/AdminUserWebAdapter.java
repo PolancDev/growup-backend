@@ -1,7 +1,7 @@
 package com.growup.auth.infrastructure.adapter.web;
 
-import com.growup.auth.application.service.UserService;
 import com.growup.auth.domain.model.User;
+import com.growup.auth.domain.port.in.UserInPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -17,14 +17,15 @@ import java.util.stream.Collectors;
 /**
  * Adaptador Web para Administración de Usuarios.
  * Endpoints REST para gestión de usuarios por administradores.
+ * Ruta alineada con OpenAPI spec: /api/v1/admin/users
  */
 @RestController
-@RequestMapping("/api/v1/auth/admin/users")
+@RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor
 @Slf4j
 public class AdminUserWebAdapter {
 
-    private final UserService userService;
+    private final UserInPort userService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")

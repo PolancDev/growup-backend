@@ -1,5 +1,6 @@
 package com.growup.common.domain.model.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
@@ -22,6 +23,7 @@ public enum CourseLevel {
         return value;
     }
 
+    @JsonCreator
     public static CourseLevel fromValue(String value) {
         for (CourseLevel level : CourseLevel.values()) {
             if (level.value.equalsIgnoreCase(value) || level.name().equalsIgnoreCase(value)) {
