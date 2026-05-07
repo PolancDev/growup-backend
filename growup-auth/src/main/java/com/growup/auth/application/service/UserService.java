@@ -3,6 +3,7 @@ package com.growup.auth.application.service;
 import com.growup.auth.domain.model.User;
 import com.growup.auth.domain.port.in.UserInPort;
 import com.growup.auth.domain.port.out.UserPersistencePort;
+import com.growup.common.domain.model.enums.Role;
 import com.growup.common.infrastructure.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,21 @@ public class UserService implements UserInPort {
     public List<User> getAllUsers() {
         log.info("GrowUp-Log: UserService - Listando todos los usuarios");
         return userPersistencePort.findAll();
+    }
+
+    @Override
+    public List<User> getAllUsersFiltered(Role role, Boolean isActive) {
+        log.info("GrowUp-Log: UserService - Listando usuarios filtrados - role: {}, isActive: {}", role, isActive);
+
+        if (role != null && isActive != null) {
+            return userPersistencePort.findByRoleAndIsActive(role, isActive);
+        } else if (role != null) {
+            return userPersistencePort.findByRole(role);
+        } else if (isActive != null) {
+            return userPersistencePort.findByIsActive(isActive);
+        } else {
+            return userPersistencePort.findAll();
+        }
     }
 
     public User updateUser(UUID id, User user) {

@@ -122,6 +122,16 @@ public class CourseService implements CourseInPort {
     }
 
     @Override
+    @Transactional
+    public Course updateCoursePrice(UUID id, Double price, UUID currentUserId) {
+        log.info("GrowUp-Log: CourseService - Actualizando precio del curso: {} a {} por usuario: {}", id, price, currentUserId);
+        Course existing = getCourseById(id);
+
+        existing.setPrice(price);
+        return coursePersistencePort.save(existing);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<Course> getCoursesByInstructor(UUID instructorId) {
         log.info("GrowUp-Log: CourseService - Listando cursos del instructor: {}", instructorId);

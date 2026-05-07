@@ -2,6 +2,7 @@ package com.growup.course.infrastructure.adapter.web;
 
 import com.growup.course.application.dto.CourseRequest;
 import com.growup.course.application.dto.CourseResponse;
+import com.growup.course.application.dto.UpdateCoursePriceRequest;
 import com.growup.course.application.mapper.CourseDtoMapper;
 import com.growup.course.application.service.CourseService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -93,6 +94,19 @@ public class CourseWebAdapter {
         log.info("GrowUp-Log: CourseWebAdapter - Eliminando curso: {} por usuario: {}", id, currentUserId);
         courseService.deleteCourse(id, currentUserId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/price")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ADMIN')")
+    @Operation(summary = "Update course price", description = "Update only the price of an existing course (requires TEACHER or ADMIN role)")
+    public ResponseEntity<CourseResponse> updateCoursePrice(
+            @Parameter(description = "Course UUID") @PathVariable UUID id,
+            @Valid @RequestBody UpdateCoursePriceRequest request) {
+        UUID currentUserId = getCurrentUserId();
+        log.info("GrowUp-Log: CourseWebAdapter - Actualizando precio del curso: {} a {} por usuario: {}",
+                id, request.getPrice(), currentUserId);
+        var updated = courseService.updateCoursePrice(id, request.getPrice(), currentUserId);
+        return ResponseEntity.ok(courseDtoMapper.toResponse(updated));
     }
 
     @GetMapping("/{id}/syllabus")

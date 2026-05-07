@@ -20,7 +20,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/growup_course?currentSchema=public
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    password: ${DB_PASSWORD:Admin@123}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10

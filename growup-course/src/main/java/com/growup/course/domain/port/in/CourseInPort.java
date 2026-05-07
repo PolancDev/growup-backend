@@ -19,5 +19,7 @@ public interface CourseInPort {
 
     void deleteCourse(UUID id, UUID currentUserId);
 
+    Course updateCoursePrice(UUID id, Double price, UUID currentUserId);
+
     List<Course> getCoursesByInstructor(UUID instructorId);
 }

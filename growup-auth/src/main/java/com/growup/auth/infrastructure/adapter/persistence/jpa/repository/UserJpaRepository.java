@@ -1,11 +1,13 @@
 package com.growup.auth.infrastructure.adapter.persistence.jpa.repository;
 
 import com.growup.auth.infrastructure.adapter.persistence.jpa.entity.UserJpaEntity;
+import com.growup.common.domain.model.enums.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,4 +28,10 @@ public interface UserJpaRepository extends JpaRepository<UserJpaEntity, UUID> {
     Optional<UserJpaEntity> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    List<UserJpaEntity> findByRole(Role role);
+
+    List<UserJpaEntity> findByIsActive(Boolean isActive);
+
+    List<UserJpaEntity> findByRoleAndIsActive(Role role, Boolean isActive);
 }

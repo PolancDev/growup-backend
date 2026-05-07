@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
@@ -66,6 +67,7 @@ public class SecurityConfig {
      * @return SecurityWebFilterChain configurado para endpoints públicos
      */
     @Bean
+    @Order(1)
     public SecurityWebFilterChain publicSecurityWebFilterChain(
         final ServerHttpSecurity http) {
         log.info("Configurando SecurityWebFilterChain PÚBLICO (sin JWT)");
@@ -93,6 +95,7 @@ public class SecurityConfig {
      * @return SecurityWebFilterChain configurado para endpoints protegidos
      */
     @Bean
+    @Order(2)
     public SecurityWebFilterChain protectedSecurityWebFilterChain(
         final ServerHttpSecurity http) {
         log.info("Configurando SecurityWebFilterChain PROTEGIDO (con JWT)");

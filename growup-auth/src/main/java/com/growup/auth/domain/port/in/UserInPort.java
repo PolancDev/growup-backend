@@ -1,6 +1,7 @@
 package com.growup.auth.domain.port.in;
 
 import com.growup.auth.domain.model.User;
+import com.growup.common.domain.model.enums.Role;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +20,16 @@ public interface UserInPort {
      * Obtiene todos los usuarios.
      */
     List<User> getAllUsers();
+
+    /**
+     * Obtiene usuarios filtrados por rol y/o estado activo.
+     * Si ambos parámetros son null, devuelve todos los usuarios.
+     *
+     * @param role      Filtrar por rol (opcional)
+     * @param isActive  Filtrar por estado activo (opcional)
+     * @return Lista de usuarios que cumplen los filtros
+     */
+    List<User> getAllUsersFiltered(Role role, Boolean isActive);
 
     /**
      * Actualiza un usuario existente.

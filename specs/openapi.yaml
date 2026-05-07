@@ -936,6 +936,59 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /courses/{id}/price:
+    patch:
+      summary: Actualizar precio de un curso
+      description: Actualizar únicamente el precio de un curso existente. Requiere rol TEACHER (propietario) o ADMIN.
+      tags: [Cursos]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del curso
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - price
+              properties:
+                price:
+                  type: number
+                  format: double
+                  minimum: 0
+                  description: Nuevo precio del curso
+      responses:
+        "200":
+          description: Precio actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+        "400":
+          description: Datos inválidos (precio negativo, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: No autorizado (no es el propietario del curso)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Curso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /courses/{id}/syllabus:
     get:
       summary: Obtener temario del curso

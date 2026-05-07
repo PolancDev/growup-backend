@@ -133,6 +133,87 @@ class UserServiceTest {
     }
 
     @Nested
+    @DisplayName("Pruebas para obtener usuarios filtrados (getAllUsersFiltered)")
+    class GetAllUsersFilteredTests {
+
+        @Test
+        @DisplayName("Debería filtrar por rol cuando solo se proporciona role")
+        void testGetAllUsersFiltered_ByRole() {
+            // Given: Se filtra por rol TEACHER
+            when(userPersistencePort.findByRole(Role.TEACHER))
+                    .thenReturn(List.of(sampleUser));
+
+            // When: Se obtienen usuarios filtrados por rol
+            List<User> result = userService.getAllUsersFiltered(Role.TEACHER, null);
+
+            // Then: Solo devuelve TEACHERs
+            assertEquals(1, result.size());
+            assertEquals(Role.TEACHER, result.get(0).getRole());
+            verify(userPersistencePort).findByRole(Role.TEACHER);
+            verify(userPersistencePort, never()).findAll();
+            verify(userPersistencePort, never()).findByIsActive(anyBoolean());
+            verify(userPersistencePort, never()).findByRoleAndIsActive(any(), anyBoolean());
+        }
+
+        @Test
+        @DisplayName("Debería filtrar por estado activo cuando solo se proporciona isActive")
+        void testGetAllUsersFiltered_ByIsActive() {
+            // Given: Se filtra por isActive=true
+            when(userPersistencePort.findByIsActive(true))
+                    .thenReturn(List.of(sampleUser));
+
+            // When: Se obtienen usuarios activos
+            List<User> result = userService.getAllUsersFiltered(null, true);
+
+            // Then: Solo devuelve usuarios activos
+            assertEquals(1, result.size());
+            assertTrue(result.get(0).getIsActive());
+            verify(userPersistencePort).findByIsActive(true);
+            verify(userPersistencePort, never()).findAll();
+            verify(userPersistencePort, never()).findByRole(any());
+            verify(userPersistencePort, never()).findByRoleAndIsActive(any(), anyBoolean());
+        }
+
+        @Test
+        @DisplayName("Debería filtrar por rol y estado cuando se proporcionan ambos")
+        void testGetAllUsersFiltered_ByRoleAndIsActive() {
+            // Given: Se filtra por rol TEACHER y isActive=true
+            when(userPersistencePort.findByRoleAndIsActive(Role.TEACHER, true))
+                    .thenReturn(List.of(sampleUser));
+
+            // When: Se obtienen usuarios filtrados por ambos
+            List<User> result = userService.getAllUsersFiltered(Role.TEACHER, true);
+
+            // Then: Solo devuelve TEACHERs activos
+            assertEquals(1, result.size());
+            assertEquals(Role.TEACHER, result.get(0).getRole());
+            assertTrue(result.get(0).getIsActive());
+            verify(userPersistencePort).findByRoleAndIsActive(Role.TEACHER, true);
+            verify(userPersistencePort, never()).findAll();
+            verify(userPersistencePort, never()).findByRole(any());
+            verify(userPersistencePort, never()).findByIsActive(anyBoolean());
+        }
+
+        @Test
+        @DisplayName("Debería devolver todos los usuarios cuando no se proporcionan filtros")
+        void testGetAllUsersFiltered_NoFilters() {
+            // Given: No hay filtros
+            when(userPersistencePort.findAll())
+                    .thenReturn(List.of(sampleUser));
+
+            // When: Se obtienen todos los usuarios sin filtros
+            List<User> result = userService.getAllUsersFiltered(null, null);
+
+            // Then: Devuelve todos los usuarios
+            assertEquals(1, result.size());
+            verify(userPersistencePort).findAll();
+            verify(userPersistencePort, never()).findByRole(any());
+            verify(userPersistencePort, never()).findByIsActive(anyBoolean());
+            verify(userPersistencePort, never()).findByRoleAndIsActive(any(), anyBoolean());
+        }
+    }
+
+    @Nested
     @DisplayName("Pruebas para actualizar usuario (updateUser)")
     class UpdateUserTests {
 

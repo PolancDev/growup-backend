@@ -2,6 +2,7 @@ package com.growup.course.infrastructure.adapter.web;
 
 import com.growup.course.application.dto.CourseRequest;
 import com.growup.course.application.dto.CourseResponse;
+import com.growup.course.application.dto.UpdateCoursePriceRequest;
 import com.growup.course.application.mapper.CourseDtoMapper;
 import com.growup.course.application.service.CourseService;
 import com.growup.course.config.SecurityConfig;
@@ -159,6 +160,41 @@ class CourseWebAdapterTest {
                 .build();
 
         mockMvc.perform(post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void updateCoursePrice_shouldReturn200_withOwner() throws Exception {
+        UpdateCoursePriceRequest request = UpdateCoursePriceRequest.builder()
+                .price(149.99)
+                .build();
+
+        Course domainCourse = Course.builder().id(courseId).name("Test Course").price(149.99).build();
+        CourseResponse response = new CourseResponse();
+        response.setId(courseId);
+        response.setName("Test Course");
+        response.setPrice(149.99);
+
+        when(courseService.updateCoursePrice(eq(courseId), eq(149.99), eq(userId))).thenReturn(domainCourse);
+        when(courseDtoMapper.toResponse(domainCourse)).thenReturn(response);
+
+        mockMvc.perform(patch("/api/v1/courses/{id}/price", courseId)
+                        .with(authentication(jwtAuth))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.price").value(149.99));
+    }
+
+    @Test
+    void updateCoursePrice_shouldReturn401_withoutAuth() throws Exception {
+        UpdateCoursePriceRequest request = UpdateCoursePriceRequest.builder()
+                .price(149.99)
+                .build();
+
+        mockMvc.perform(patch("/api/v1/courses/{id}/price", courseId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());

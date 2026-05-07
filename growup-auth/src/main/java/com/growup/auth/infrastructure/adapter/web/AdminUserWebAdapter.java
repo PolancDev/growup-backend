@@ -2,6 +2,7 @@ package com.growup.auth.infrastructure.adapter.web;
 
 import com.growup.auth.domain.model.User;
 import com.growup.auth.domain.port.in.UserInPort;
+import com.growup.common.domain.model.enums.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -29,9 +30,11 @@ public class AdminUserWebAdapter {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Map<String, Object>>> getAllUsers() {
-        log.info("GrowUp-Log: AdminUserWebAdapter - Listando todos los usuarios");
-        List<User> users = userService.getAllUsers();
+    public ResponseEntity<List<Map<String, Object>>> getAllUsers(
+            @RequestParam(required = false) Role role,
+            @RequestParam(required = false) Boolean isActive) {
+        log.info("GrowUp-Log: AdminUserWebAdapter - Listando usuarios - role: {}, isActive: {}", role, isActive);
+        List<User> users = userService.getAllUsersFiltered(role, isActive);
         
         List<Map<String, Object>> response = users.stream()
                 .map(this::mapUserToDto)

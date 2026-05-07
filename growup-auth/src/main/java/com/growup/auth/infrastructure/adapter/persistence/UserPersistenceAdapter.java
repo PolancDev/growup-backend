@@ -4,6 +4,7 @@ import com.growup.auth.domain.model.User;
 import com.growup.auth.domain.port.out.UserPersistencePort;
 import com.growup.auth.infrastructure.adapter.persistence.jpa.repository.UserJpaRepository;
 import com.growup.auth.infrastructure.adapter.persistence.mapper.UserPersistenceMapper;
+import com.growup.common.domain.model.enums.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -57,6 +58,27 @@ public class UserPersistenceAdapter implements UserPersistencePort {
     @Override
     public List<User> findAll() {
         return userRepository.findAll().stream()
+                .map(userMapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<User> findByRole(Role role) {
+        return userRepository.findByRole(role).stream()
+                .map(userMapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<User> findByIsActive(Boolean isActive) {
+        return userRepository.findByIsActive(isActive).stream()
+                .map(userMapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<User> findByRoleAndIsActive(Role role, Boolean isActive) {
+        return userRepository.findByRoleAndIsActive(role, isActive).stream()
                 .map(userMapper::toDomain)
                 .collect(Collectors.toList());
     }

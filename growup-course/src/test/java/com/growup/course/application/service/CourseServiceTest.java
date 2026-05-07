@@ -187,4 +187,26 @@ class CourseServiceTest {
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }
+
+    @Test
+    void updateCoursePrice_shouldUpdatePriceAndReturnCourse() {
+        Double newPrice = 149.99;
+
+        when(coursePersistencePort.findById(courseId)).thenReturn(Optional.of(course));
+        when(coursePersistencePort.save(any(Course.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Course result = courseService.updateCoursePrice(courseId, newPrice, instructorId);
+
+        assertNotNull(result);
+        assertEquals(newPrice, result.getPrice());
+        verify(coursePersistencePort).save(any(Course.class));
+    }
+
+    @Test
+    void updateCoursePrice_shouldThrowResourceNotFoundWhenCourseNotFound() {
+        when(coursePersistencePort.findById(courseId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> courseService.updateCoursePrice(courseId, 199.0, instructorId));
+    }
 }

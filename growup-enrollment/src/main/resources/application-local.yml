@@ -1,5 +1,5 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/growup_enrollment
+    url: jdbc:postgresql://localhost:5432/growup_enrollment
     username: postgres
-    password: admin
+    password: Admin@123
